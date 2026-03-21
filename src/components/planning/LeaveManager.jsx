@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, Calendar, CheckCircle, XCircle, Clock, Filter, 
   Search, MoreHorizontal, User, FileText, PieChart, AlertCircle, 
@@ -19,8 +19,10 @@ const LeaveManager = () => {
 
   // --- BİLDİRİM SİSTEMİ ---
   const [toasts, setToasts] = useState([]);
+  const toastIdRef = useRef(0);
   const showToast = (message, type = 'success') => {
-    const id = Date.now();
+    const id = `toast-${toastIdRef.current}`;
+    toastIdRef.current += 1;
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
   };
@@ -209,13 +211,13 @@ const LeaveManager = () => {
         await updateLeaveStatus(id, newStatus);
         const msg = newStatus === 'Onaylandı' ? 'İzin onaylandı.' : 'İzin reddedildi.';
         showToast(msg, newStatus === 'Onaylandı' ? 'success' : 'error');
-    } catch (error) { showToast("Durum güncellenemedi.", "error"); }
+    } catch { showToast("Durum güncellenemedi.", "error"); }
   };
 
   const handleDeleteLeave = async (id) => {
     if(window.confirm("Bu kaydı silmek istediğinize emin misiniz?")) {
         try { await deleteLeaveRequest(id); showToast("Kayıt silindi.", "error"); } 
-        catch (error) { showToast("Silinemedi.", "error"); }
+        catch { showToast("Silinemedi.", "error"); }
     }
   };
 

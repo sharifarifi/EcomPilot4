@@ -1,55 +1,47 @@
-import { db } from "./firebaseConfig";
-import { 
-  collection, addDoc, updateDoc, deleteDoc, doc, 
-  onSnapshot, query, orderBy, serverTimestamp 
-} from "firebase/firestore";
+import { query, orderBy, serverTimestamp } from 'firebase/firestore';
+import {
+  FIRESTORE_PATHS,
+  collectionRef,
+  createDocument,
+  deleteDocument,
+  subscribeToQuery,
+  updateDocument
+} from './serviceCore';
 
-const REPORTS_COLLECTION = "daily_reports";
+const SERVICE_NAME = 'reportService';
+const REPORTS_COLLECTION = FIRESTORE_PATHS.dailyReports;
 
-// --- RAPORLARI DİNLE ---
+const mapReportSnapshot = (document) => {
+  const data = document.data();
+
+  return {
+    id: document.id,
+    ...data,
+    createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : null
+  }; 
+};
+
 export const subscribeToReports = (callback) => {
-  // En yeniden en eskiye sırala
-  const q = query(collection(db, REPORTS_COLLECTION), orderBy("date", "desc"));
-  
-  return onSnapshot(q, (snapshot) => {
-    const reports = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return { 
-        id: doc.id, 
-        ...data,
-        // Firestore Timestamp'i milisaniyeye çevir (Kilit kontrolü için)
-        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : Date.now() 
-      };
-    });
-    callback(reports);
-  });
+  const reportsQuery = query(collectionRef(REPORTS_COLLECTION), orderBy('date', 'desc'));
+  return subscribeToQuery(SERVICE_NAME, 'subscribeToReports', reportsQuery, callback, mapReportSnapshot);
 };
 
-// --- RAPOR EKLE ---
 export const addReport = async (reportData) => {
-  try {
-    await addDoc(collection(db, REPORTS_COLLECTION), {
+  await createDocument(
+    SERVICE_NAME,
+    REPORTS_COLLECTION,
+    {
       ...reportData,
-      createdAt: serverTimestamp() // Sunucu zamanı (Güvenlik için)
-    });
-  } catch (error) {
-    console.error("Rapor ekleme hatası:", error);
-    throw error;
-  }
+      createdAt: serverTimestamp()
+    },
+    'addReport'
+  );
 };
 
-// --- RAPOR GÜNCELLE ---
 export const updateReport = async (reportId, updatedData) => {
-  const reportRef = doc(db, REPORTS_COLLECTION, reportId);
-  await updateDoc(reportRef, updatedData);
+  await updateDocument(SERVICE_NAME, REPORTS_COLLECTION, reportId, updatedData, 'updateReport');
 };
 
-// --- SİL ---
 export const deleteReport = async (reportId) => {
-  await deleteDoc(doc(db, REPORTS_COLLECTION, reportId));
-  try {
-    await deleteDoc(doc(db, REPORTS_COLLECTION, reportId));
-  } catch (error) {
-    throw error;
-  }
+  await deleteDocument(SERVICE_NAME, REPORTS_COLLECTION, reportId, 'deleteReport');
 };

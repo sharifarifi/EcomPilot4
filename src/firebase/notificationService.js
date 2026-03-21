@@ -1,47 +1,53 @@
-import { db } from "./firebaseConfig";
-import { 
-  collection, addDoc, updateDoc, doc, 
-  onSnapshot, query, where, orderBy, serverTimestamp 
-} from "firebase/firestore";
+import { query, where, orderBy, serverTimestamp } from 'firebase/firestore';
+import {
+  FIRESTORE_PATHS,
+  collectionRef,
+  createDocument,
+  logServiceError,
+  subscribeToQuery,
+  updateDocument
+} from './serviceCore';
 
-const NOTIF_COLLECTION = "notifications";
+const SERVICE_NAME = 'notificationService';
+const NOTIFICATIONS_COLLECTION = FIRESTORE_PATHS.notifications;
 
-// --- BİLDİRİM GÖNDER (Sistem Kullanır) ---
 export const sendNotification = async (recipientId, message, type = 'info') => {
   try {
-    await addDoc(collection(db, NOTIF_COLLECTION), {
-      recipientId,   // Kime gidecek?
-      message,       // Ne yazacak?
-      type,          // 'task', 'alert', 'info'
-      isRead: false, // Okundu mu?
-      createdAt: serverTimestamp()
-    });
+    await createDocument(
+      SERVICE_NAME,
+      NOTIFICATIONS_COLLECTION,
+      {
+        recipientId,
+        message,
+        type,
+        isRead: false,
+        createdAt: serverTimestamp()
+      },
+      'sendNotification'
+    );
+    return true;
   } catch (error) {
-    console.error("Bildirim gönderilemedi:", error);
+    logServiceError(SERVICE_NAME, 'sendNotification:nonBlocking', error, { recipientId, type });
+    return false;
   }
 };
 
-// --- BİLDİRİMLERİ DİNLE (Kullanıcı İçin) ---
 export const subscribeToNotifications = (userId, callback) => {
-  // Sadece bana gelen ve okunmamış veya yeni olanları getir (Son 20)
-  const q = query(
-    collection(db, NOTIF_COLLECTION), 
-    where("recipientId", "==", userId),
-    orderBy("createdAt", "desc")
+  const notificationsQuery = query(
+    collectionRef(NOTIFICATIONS_COLLECTION),
+    where('recipientId', '==', userId),
+    orderBy('createdAt', 'desc')
   );
 
-  return onSnapshot(q, (snapshot) => {
-    const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    callback(notifs);
-  });
+  return subscribeToQuery(SERVICE_NAME, 'subscribeToNotifications', notificationsQuery, callback);
 };
 
-// --- OKUNDU İŞARETLE ---
 export const markNotificationAsRead = async (notifId) => {
   try {
-    const notifRef = doc(db, NOTIF_COLLECTION, notifId);
-    await updateDoc(notifRef, { isRead: true });
+    await updateDocument(SERVICE_NAME, NOTIFICATIONS_COLLECTION, notifId, { isRead: true }, 'markNotificationAsRead');
+    return true;
   } catch (error) {
-    console.error("Okundu hatası:", error);
+    logServiceError(SERVICE_NAME, 'markNotificationAsRead:nonBlocking', error, { notifId });
+    return false;
   }
 };

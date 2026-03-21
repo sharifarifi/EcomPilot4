@@ -1,91 +1,71 @@
-import { db } from "./firebaseConfig";
-import { sendNotification } from './notificationService'; // Bildirim servisi import edildi
-import { 
-  collection, addDoc, updateDoc, deleteDoc, doc, 
-  onSnapshot, query, orderBy, serverTimestamp, arrayUnion 
-} from "firebase/firestore";
+import { query, orderBy, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { sendNotification } from './notificationService';
+import {
+  FIRESTORE_PATHS,
+  collectionRef,
+  createDocument,
+  deleteDocument,
+  subscribeToQuery,
+  updateDocument
+} from './serviceCore';
 
-const TASKS_COLLECTION = "tasks";
+const SERVICE_NAME = 'taskService';
+const TASKS_COLLECTION = FIRESTORE_PATHS.tasks;
 
-// --- GÖREVLERİ DİNLE (Gerçek Zamanlı) ---
+const createSystemLogEntry = (text) => ({
+  id: Date.now(),
+  user: 'Sistem',
+  text,
+  type: 'log',
+  time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+});
+
 export const subscribeToTasks = (callback) => {
-  const q = query(collection(db, TASKS_COLLECTION), orderBy("createdAt", "desc"));
-  return onSnapshot(q, (snapshot) => {
-    const tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    callback(tasks);
-  });
+  const tasksQuery = query(collectionRef(TASKS_COLLECTION), orderBy('createdAt', 'desc'));
+  return subscribeToQuery(SERVICE_NAME, 'subscribeToTasks', tasksQuery, callback);
 };
 
-// --- GÖREV EKLE (DÜZELTİLDİ: BİLDİRİM EKLENDİ) ---
 export const addTask = async (taskData) => {
-  try {
-    // 1. Görevi Veritabanına Ekle
-    await addDoc(collection(db, TASKS_COLLECTION), {
+  await createDocument(
+    SERVICE_NAME,
+    TASKS_COLLECTION,
+    {
       ...taskData,
       status: 'Bekliyor',
       createdAt: serverTimestamp(),
-      comments: [{
-        id: Date.now(),
-        user: 'Sistem',
-        text: 'İş emri oluşturuldu.',
-        type: 'log',
-        time: new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})
-      }]
-    });
+      comments: [createSystemLogEntry('İş emri oluşturuldu.')]
+    },
+    'addTask'
+  );
 
-    // 2. Personele Bildirim Gönder (YENİ EKLENEN KISIM)
-    if (taskData.assignee) {
-        await sendNotification(
-            taskData.assignee, 
-            `Yeni bir görev atandı: "${taskData.title}"`, 
-            'task'
-        );
-    }
-
-  } catch (error) {
-    console.error("Görev ekleme hatası:", error);
-    throw error;
+  if (taskData.assignee) {
+    await sendNotification(taskData.assignee, `Yeni bir görev atandı: "${taskData.title}"`, 'task');
   }
 };
 
-// --- DURUM GÜNCELLE ---
 export const updateTaskStatus = async (taskId, newStatus, userName) => {
-  try {
-    const taskRef = doc(db, TASKS_COLLECTION, taskId);
-    
-    // Log mesajı ekle
-    const logMessage = {
-        id: Date.now(),
-        user: 'Sistem',
-        text: `${userName} durumu değiştirdi: ${newStatus}`,
-        type: 'log',
-        time: new Date().toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})
-    };
-
-    await updateDoc(taskRef, {
+  await updateDocument(
+    SERVICE_NAME,
+    TASKS_COLLECTION,
+    taskId,
+    {
       status: newStatus,
-      comments: arrayUnion(logMessage)
-    });
-  } catch (error) {
-    console.error("Durum güncelleme hatası:", error);
-    throw error;
-  }
+      comments: arrayUnion(createSystemLogEntry(`${userName} durumu değiştirdi: ${newStatus}`))
+    },
+    'updateTaskStatus'
+  );
 };
 
-// --- YORUM EKLE ---
 export const addTaskComment = async (taskId, comment) => {
-  const taskRef = doc(db, TASKS_COLLECTION, taskId);
-  await updateDoc(taskRef, {
-    comments: arrayUnion(comment)
-  });
+  await updateDocument(
+    SERVICE_NAME,
+    TASKS_COLLECTION,
+    taskId,
+    { comments: arrayUnion(comment) },
+    'addTaskComment'
+  );
 };
 
-// --- SİL ---
 export const deleteTask = async (taskId) => {
-  await deleteDoc(doc(db, TASKS_COLLECTION, taskId));
-  try {
-    await deleteDoc(doc(db, TASKS_COLLECTION, taskId));
-  } catch (error) {
-    throw error;
-  }
+  await deleteDocument(SERVICE_NAME, TASKS_COLLECTION, taskId, 'deleteTask');
 };
