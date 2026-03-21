@@ -6,6 +6,7 @@ import {
   FileText, Filter, CreditCard, Banknote, Landmark, Target,
   Percent, ArrowRight, Printer, Share2, CheckCircle, Clock, AlertCircle // <-- EKLENEN İKONLAR
 } from 'lucide-react';
+import { financeReportFinancialData, financeReportTransactions } from '../../demo-data/financeReport';
 
 // --- YARDIMCI BİLEŞENLER ---
 
@@ -134,22 +135,10 @@ const FinanceReport = () => {
   const [dateRange, setDateRange] = useState('Bu Yıl');
   const [activeTab, setActiveTab] = useState('overview'); 
 
-  // --- MOCK DATA ---
-  const financialData = [
-    { label: 'Oca', revenue: 120, expense: 90, profit: 30 }, 
-    { label: 'Şub', revenue: 150, expense: 100, profit: 50 },
-    { label: 'Mar', revenue: 180, expense: 110, profit: 70 }, 
-    { label: 'Nis', revenue: 220, expense: 140, profit: 80 },
-    { label: 'May', revenue: 250, expense: 130, profit: 120 }, 
-    { label: 'Haz', revenue: 300, expense: 160, profit: 140 },
-    { label: 'Tem', revenue: 280, expense: 150, profit: 130 }, 
-    { label: 'Ağu', revenue: 320, expense: 180, profit: 140 },
-    { label: 'Eyl', revenue: 350, expense: 200, profit: 150 }, 
-    { label: 'Eki', revenue: 380, expense: 210, profit: 170 },
-    { label: 'Kas', revenue: 450, expense: 240, profit: 210 }, 
-    { label: 'Ara', revenue: 500, expense: 280, profit: 220 }
-  ];
+  const financialData = financeReportFinancialData;
+  const transactions = financeReportTransactions;
 
+  const loading = false;
   const transactions = [
     { id: 'TX-9921', desc: 'Shopify Satış Geliri', cat: 'Satış', date: 'Bugün, 14:30', amount: 12450, type: 'in', status: 'Tamamlandı' },
     { id: 'TX-9920', desc: 'Meta Ads Reklam', cat: 'Pazarlama', date: 'Bugün, 11:00', amount: -4200, type: 'out', status: 'Tamamlandı' },

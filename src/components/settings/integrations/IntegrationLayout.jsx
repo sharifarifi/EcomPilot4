@@ -10,11 +10,12 @@ import {
 import { saveIntegration, subscribeToIntegrations } from '../../../firebase/integrationSettingsService';
 
 // ALT BİLEŞENLER VE VERİLER
-import EcommerceApps, { ecommerceData } from './EcommerceApps';
-import MarketplaceApps, { marketplaceData } from './MarketplaceApps';
-import LogisticsApps, { logisticsData } from './LogisticsApps';
-import PaymentApps, { paymentData } from './PaymentApps';
-import AccountingApps, { accountingData } from './AccountingApps'; 
+import EcommerceApps from './EcommerceApps';
+import MarketplaceApps from './MarketplaceApps';
+import LogisticsApps from './LogisticsApps';
+import PaymentApps from './PaymentApps';
+import AccountingApps from './AccountingApps';
+import { ecommerceData, marketplaceData, logisticsData, paymentData, accountingData } from '../../../demo-data/integrations/catalog'; 
 
 const IntegrationLayout = () => {
   const [activeTab, setActiveTab] = useState('E-Ticaret');
