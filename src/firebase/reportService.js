@@ -1,4 +1,4 @@
-import { db } from "./firebaseconfig";
+import { db } from "./firebaseConfig";
 import { 
   collection, addDoc, updateDoc, deleteDoc, doc, 
   onSnapshot, query, orderBy, serverTimestamp 

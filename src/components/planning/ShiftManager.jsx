@@ -11,7 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { subscribeToShifts, getTodayShiftByUser, checkIn, updateShift } from '../../firebase/shiftService';
 import { getDepartments } from '../../firebase/teamService';
 import { collection, getDocs } from 'firebase/firestore'; 
-import { db } from '../../firebase/firebaseconfig';
+import { db } from '../../firebase/firebaseConfig';
 
 const ShiftManager = () => {
   const { userData } = useAuth();
