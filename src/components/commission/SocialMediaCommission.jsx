@@ -17,6 +17,54 @@ const formatCurrency = (amount) => {
   return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(amount);
 };
 
+
+const getTierRate = (tiers = [], rate) => {
+  if (!tiers.length) return 0;
+
+  const matchedTier = tiers.find(tier => rate >= tier.min && rate <= tier.max);
+  if (matchedTier) return matchedTier.rate;
+
+  if (rate > 0) {
+    const maxTier = tiers[tiers.length - 1];
+    if (maxTier && rate > maxTier.max) return maxTier.rate;
+  }
+
+  return 0;
+};
+
+const getManualBonusRate = (manualBonuses = [], manualRatio) => {
+  if (!manualBonuses.length) return 0;
+
+  const matchedBonus = manualBonuses.find(bonus => manualRatio >= bonus.minRatio && manualRatio <= bonus.maxRatio);
+  if (matchedBonus) return matchedBonus.extraRate;
+
+  const maxBonus = manualBonuses[manualBonuses.length - 1];
+  if (maxBonus && manualRatio > maxBonus.maxRatio) return maxBonus.extraRate;
+
+  return 0;
+};
+
+const calculateSocialCommission = ({ webSales = 0, manualSales = 0, targetRevenue = 0, rules = null }) => {
+  const totalRevenue = Number(webSales) + Number(manualSales);
+  const achievementRate = targetRevenue > 0 ? (totalRevenue / targetRevenue) * 100 : 0;
+  const baseRate = getTierRate(rules?.tiers || [], achievementRate);
+  const manualRatio = totalRevenue > 0 ? (Number(manualSales) / totalRevenue) * 100 : 0;
+  const bonusRate = getManualBonusRate(rules?.manualBonuses || [], manualRatio);
+  const baseCommissionAmount = totalRevenue * (baseRate / 100);
+  const bonusCommissionAmount = Number(manualSales) * (bonusRate / 100);
+  const leaderBonusAmount = rules?.isLeaderBonusActive ? Number(manualSales) * ((rules.leaderBonus || 0) / 100) : 0;
+
+  return {
+    totalRevenue,
+    achievementRate,
+    baseRate,
+    bonusRate,
+    baseCommissionAmount,
+    bonusCommissionAmount,
+    leaderBonusAmount
+  };
+};
+
 // --- YARDIMCI: PERSONEL DETAY MODALI ---
 const StaffDetailModal = ({ person, onClose, canSeeDetails }) => {
   if (!person) return null;
@@ -135,7 +183,6 @@ const SocialMediaCommission = () => {
   const [saving, setSaving] = useState(false);
   
   // Veriler (Kişisel)
-  const [targetRevenue, setTargetRevenue] = useState(1000000); 
   const [webSales, setWebSales] = useState(0);
   const [manualSales, setManualSales] = useState(0);
   const [currentDate, setCurrentDate] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
@@ -155,7 +202,6 @@ const SocialMediaCommission = () => {
     const unsubRules = subscribeToCommissionSettings((data) => {
       if (data && data.social) {
         setRules(data.social);
-        setTargetRevenue(data.social.monthlyTarget || 1000000); 
       }
     });
     return () => unsubRules();
@@ -228,6 +274,11 @@ const SocialMediaCommission = () => {
     fetchData();
   }, [currentDate, currentUser, isSimulationMode, rules]);
 
+  const targetRevenue = rules?.monthlyTarget || 1000000;
+
+  const personalCommission = useMemo(() => (
+    calculateSocialCommission({ webSales, manualSales, targetRevenue, rules })
+  ), [webSales, manualSales, targetRevenue, rules]);
   const personalMetrics = useMemo(() => calculateCommissionMetrics({
     webSales,
     manualSales,
@@ -244,6 +295,7 @@ const SocialMediaCommission = () => {
     baseCommissionAmount,
     bonusCommissionAmount,
     leaderBonusAmount
+  } = personalCommission;
   } = personalMetrics;
 
   // 4. LİSTE HESAPLAMASI (Tüm personel için kuralları uygula)
@@ -251,6 +303,18 @@ const SocialMediaCommission = () => {
     if (!mergedStaffData || mergedStaffData.length === 0 || !rules) return [];
 
     // A. Her personel için primleri tekrar hesapla
+    const calculatedList = mergedStaffData.map(person => {
+        const metrics = calculateSocialCommission({
+          webSales: person.webSales || 0,
+          manualSales: person.manualSales || 0,
+          targetRevenue,
+          rules
+        });
+
+        return {
+            ...person,
+            ...metrics,
+            rawTotal: metrics.baseCommissionAmount + metrics.bonusCommissionAmount // Lider bonusu hariç
     const calculatedList = mergedStaffData.map(p => {
         const metrics = calculateCommissionMetrics({
             webSales: p.webSales || 0,

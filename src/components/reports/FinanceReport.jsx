@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import React, { useMemo, useState } from 'react';
 import { 
   Wallet, TrendingUp, TrendingDown, DollarSign, Calendar, 
@@ -9,6 +10,7 @@ import {
 // --- YARDIMCI BİLEŞENLER ---
 
 // 1. Premium Finans Kartı
+const FinanceCard = ({ title, value, subValue, change, trend, icon, color, loading, target }) => (
 const FinanceCard = ({ title, value, subValue, change, trend, icon, color, loading, target }) => {
   const Icon = icon;
 
@@ -24,7 +26,7 @@ const FinanceCard = ({ title, value, subValue, change, trend, icon, color, loadi
       <>
         <div className="flex justify-between items-start mb-2 relative z-10">
            <div className={`p-3 rounded-xl bg-${color}-50 text-${color}-600 border border-${color}-100 transition-transform group-hover:scale-110`}>
-              <Icon size={22} />
+              {React.createElement(icon, { size: 22 })}
            </div>
            <div className="text-right">
               <span className={`flex items-center justify-end gap-1 text-xs font-bold ${trend === 'up' ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -37,6 +39,7 @@ const FinanceCard = ({ title, value, subValue, change, trend, icon, color, loadi
         <div className="relative z-10 mt-2">
            <h3 className="text-3xl font-black text-slate-800 tracking-tight">{value}</h3>
            <p className="text-sm font-medium text-slate-500">{title}</p>
+           <p className="text-xs text-slate-400 mt-1">{subValue}</p>
            {subValue && <p className="text-xs font-semibold text-slate-400 mt-1">{subValue}</p>}
         </div>
 
@@ -53,7 +56,7 @@ const FinanceCard = ({ title, value, subValue, change, trend, icon, color, loadi
 
         {/* Arkaplan İkonu */}
         <div className={`absolute -bottom-6 -right-6 p-4 opacity-[0.03] text-${color}-900 transform rotate-12 scale-150 pointer-events-none`}>
-           <Icon size={120} />
+           {React.createElement(icon, { size: 120 })}
         </div>
       </>
     )}
@@ -155,6 +158,7 @@ const FinanceReport = () => {
     { id: 'TX-9917', desc: 'AWS Sunucu', cat: 'Altyapı', date: '20 Mar', amount: -450, type: 'out', status: 'Tamamlandı' },
   ];
 
+  const loading = false;
 
   const loading = false;
 

@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { 
   ShoppingBag, Truck, CreditCard, Wallet, Store, Key, RefreshCw, Activity, 
@@ -38,6 +39,44 @@ const IntegrationLayout = () => {
   const [modalTab, setModalTab] = useState('general'); 
   const [showApiKey, setShowApiKey] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+
+
+  const selectedApp = useMemo(() => {
+    if (!selectedAppId) return null;
+
+    const liveApp = apps.find(app => app.id === selectedAppId);
+    if (!liveApp) return null;
+    if (!selectedAppDraft) return liveApp;
+
+    return {
+      ...liveApp,
+      ...selectedAppDraft,
+      logs: selectedAppDraft.logs ?? liveApp.logs ?? []
+    };
+  }, [apps, selectedAppId, selectedAppDraft]);
+
+  const handleSelectApp = (app) => {
+    setSelectedAppId(app.id);
+    setSelectedAppDraft(null);
+    setModalTab('general');
+    setShowApiKey(false);
+  };
+
+  const closeModal = () => {
+    setSelectedAppId(null);
+    setSelectedAppDraft(null);
+    setModalTab('general');
+    setShowApiKey(false);
+    setIsConnecting(false);
+  };
+
+  const updateSelectedAppDraft = (updater) => {
+    setSelectedAppDraft(prev => {
+      const base = prev ?? selectedApp;
+      if (!base) return prev;
+      return typeof updater === 'function' ? updater(base) : updater;
+    });
+  };
   // --- VERİTABANI BAĞLANTISI ---
   useEffect(() => {
     const unsubscribe = subscribeToIntegrations((data) => {
@@ -109,6 +148,7 @@ const IntegrationLayout = () => {
   
   // 1. Standart Alan Güncelleme (Local State)
   const handleFieldChange = (key, value) => {
+    updateSelectedAppDraft(prev => ({
     setSelectedAppDraft(prev => ({
       ...prev,
       fields: { ...prev.fields, [key]: value }
@@ -131,6 +171,7 @@ const IntegrationLayout = () => {
 
   // 2. Gelişmiş Ayar Güncelleme (Local State)
   const handleAdvancedChange = (key, value) => {
+    updateSelectedAppDraft(prev => ({
     setSelectedAppDraft(prev => ({
       ...prev,
       advancedSettings: {
@@ -205,6 +246,7 @@ const IntegrationLayout = () => {
   };
 
   const handleTogglePermission = (key) => {
+    updateSelectedAppDraft(prev => ({
     setSelectedAppDraft(prev => ({
       ...prev,
       permissions: { ...prev.permissions, [key]: !prev.permissions[key] }
@@ -222,6 +264,7 @@ const IntegrationLayout = () => {
         updatedAt: new Date().toISOString()
       };
       await saveIntegration(selectedApp.id, dataToSave);
+      closeModal();
       setSelectedAppId(null);
       setSelectedAppDraft(null); // Modalı kapat
       showToast("Ayarlar kaydedildi.");
@@ -231,6 +274,7 @@ const IntegrationLayout = () => {
   };
 
   const clearLogs = () => {
+    updateSelectedAppDraft(prev => ({ ...prev, logs: [] }));
     if (!selectedApp) return;
     setLiveLogs(prev => ({ ...prev, [selectedApp.id]: [] }));
     setSelectedAppDraft(prev => prev ? { ...prev, logs: [] } : prev);
@@ -259,6 +303,11 @@ const IntegrationLayout = () => {
       {renderTabs()}
 
       <div className="min-h-[400px]">
+         {activeTab === 'E-Ticaret' && <EcommerceApps apps={apps} onManage={handleSelectApp} />}
+         {activeTab === 'Pazaryeri' && <MarketplaceApps apps={apps} onManage={handleSelectApp} />}
+         {activeTab === 'Lojistik' && <LogisticsApps apps={apps} onManage={handleSelectApp} />}
+         {activeTab === 'Muhasebe' && <AccountingApps apps={apps} onManage={handleSelectApp} />}
+         {activeTab === 'Ödeme' && <PaymentApps apps={apps} onManage={handleSelectApp} />}
          {activeTab === 'E-Ticaret' && <EcommerceApps apps={apps} onManage={handleManageApp} />}
          {activeTab === 'Pazaryeri' && <MarketplaceApps apps={apps} onManage={handleManageApp} />}
          {activeTab === 'Lojistik' && <LogisticsApps apps={apps} onManage={handleManageApp} />}
@@ -409,6 +458,7 @@ const IntegrationLayout = () => {
             <div className="w-5/12 bg-[#0d1117] text-slate-300 flex flex-col font-mono text-xs border-l border-slate-800">
                <div className="p-5 border-b border-slate-800 flex justify-between items-center bg-[#161b22]">
                   <div className="flex items-center gap-2"><Terminal size={16} className="text-blue-400"/><span className="font-bold text-slate-200">Sistem Monitörü</span>{selectedApp.status === 'connected' && <span className="flex h-2 w-2 relative ml-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>}</div>
+                  <button onClick={closeModal} className="p-1 hover:bg-white/10 rounded"><X size={18} className="text-slate-500 hover:text-white"/></button>
                   <button onClick={() => { setSelectedAppId(null); setSelectedAppDraft(null); }} className="p-1 hover:bg-white/10 rounded"><X size={18} className="text-slate-500 hover:text-white"/></button>
                </div>
                <div className="flex-1 p-5 overflow-y-auto custom-scrollbar space-y-3 font-mono">
