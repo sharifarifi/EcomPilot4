@@ -126,6 +126,53 @@ const StaffDetailModal = ({ person, onClose, canSeeDetails }) => {
   );
 };
 
+
+const getTierRate = (tiers = [], achievementRate = 0) => {
+  const matchedTier = tiers.find(t => achievementRate >= t.min && achievementRate <= t.max);
+  if (matchedTier) return matchedTier.rate;
+
+  if (achievementRate > 0) {
+    const maxTier = tiers[tiers.length - 1];
+    if (maxTier && achievementRate > maxTier.max) return maxTier.rate;
+  }
+
+  return 0;
+};
+
+const getManualBonusRate = (manualBonuses = [], manualRatio = 0) => {
+  const matchedBonus = manualBonuses.find(b => manualRatio >= b.minRatio && manualRatio <= b.maxRatio);
+  if (matchedBonus) return matchedBonus.extraRate;
+
+  const maxBonus = manualBonuses[manualBonuses.length - 1];
+  if (maxBonus && manualRatio > maxBonus.maxRatio) return maxBonus.extraRate;
+
+  return 0;
+};
+
+const calculateCommissionMetrics = ({ webSales = 0, manualSales = 0, targetRevenue = 0, rules = null, includeLeaderBonus = false }) => {
+  const totalRevenue = Number(webSales) + Number(manualSales);
+  const achievementRate = targetRevenue > 0 ? (totalRevenue / targetRevenue) * 100 : 0;
+  const baseRate = getTierRate(rules?.tiers, achievementRate);
+  const manualRatio = totalRevenue > 0 ? (Number(manualSales) / totalRevenue) * 100 : 0;
+  const bonusRate = getManualBonusRate(rules?.manualBonuses, manualRatio);
+  const baseCommissionAmount = totalRevenue * (baseRate / 100);
+  const bonusCommissionAmount = Number(manualSales) * (bonusRate / 100);
+  const leaderBonusAmount = includeLeaderBonus && rules?.isLeaderBonusActive
+    ? Number(manualSales) * ((Number(rules.leaderBonus) || 0) / 100)
+    : 0;
+
+  return {
+    totalRevenue,
+    achievementRate,
+    baseRate,
+    bonusRate,
+    baseCommissionAmount,
+    bonusCommissionAmount,
+    leaderBonusAmount,
+    totalPayout: baseCommissionAmount + bonusCommissionAmount + leaderBonusAmount,
+  };
+};
+
 const SocialMediaCommission = () => {
   const { currentUser, userData } = useAuth();
   
@@ -146,6 +193,7 @@ const SocialMediaCommission = () => {
   // Kurallar
   const [rules, setRules] = useState(null);
   
+
   // YETKİ KONTROLÜ
   const isAuthorized = ['Admin', 'Manager', 'Director', 'CEO'].includes(userData?.role);
 
@@ -231,6 +279,13 @@ const SocialMediaCommission = () => {
   const personalCommission = useMemo(() => (
     calculateSocialCommission({ webSales, manualSales, targetRevenue, rules })
   ), [webSales, manualSales, targetRevenue, rules]);
+  const personalMetrics = useMemo(() => calculateCommissionMetrics({
+    webSales,
+    manualSales,
+    targetRevenue,
+    rules,
+    includeLeaderBonus: true
+  }), [webSales, manualSales, targetRevenue, rules]);
 
   const {
     totalRevenue,
@@ -241,6 +296,7 @@ const SocialMediaCommission = () => {
     bonusCommissionAmount,
     leaderBonusAmount
   } = personalCommission;
+  } = personalMetrics;
 
   // 4. LİSTE HESAPLAMASI (Tüm personel için kuralları uygula)
   const teamList = useMemo(() => {
@@ -259,6 +315,53 @@ const SocialMediaCommission = () => {
             ...person,
             ...metrics,
             rawTotal: metrics.baseCommissionAmount + metrics.bonusCommissionAmount // Lider bonusu hariç
+
+        return {
+            ...person,
+            ...metrics,
+            rawTotal: metrics.baseCommissionAmount + metrics.bonusCommissionAmount // Lider bonusu hariç
+
+        return {
+            ...person,
+            ...metrics,
+            rawTotal: metrics.baseCommissionAmount + metrics.bonusCommissionAmount // Lider bonusu hariç
+
+        return {
+            ...person,
+            ...metrics,
+            rawTotal: metrics.baseCommissionAmount + metrics.bonusCommissionAmount // Lider bonusu hariç
+
+        return {
+            ...person,
+            ...metrics,
+            rawTotal: metrics.baseCommissionAmount + metrics.bonusCommissionAmount // Lider bonusu hariç
+
+        return {
+            ...person,
+            ...metrics,
+            rawTotal: metrics.baseCommissionAmount + metrics.bonusCommissionAmount // Lider bonusu hariç
+
+        return {
+            ...person,
+            ...metrics,
+            rawTotal: metrics.baseCommissionAmount + metrics.bonusCommissionAmount // Lider bonusu hariç
+
+        return {
+            ...person,
+            ...metrics,
+            rawTotal: metrics.baseCommissionAmount + metrics.bonusCommissionAmount // Lider bonusu hariç
+    const calculatedList = mergedStaffData.map(p => {
+        const metrics = calculateCommissionMetrics({
+            webSales: p.webSales || 0,
+            manualSales: p.manualSales || 0,
+            targetRevenue,
+            rules
+        });
+
+        return {
+            ...p,
+            ...metrics,
+            rawTotal: metrics.totalPayout
         };
     });
 
