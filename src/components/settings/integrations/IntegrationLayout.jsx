@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { 
   ShoppingBag, Truck, CreditCard, Wallet, Store, Key, RefreshCw, Activity, 
   AlertCircle, Eye, EyeOff, Save, CheckCircle, X, Settings, Wifi, 
@@ -22,33 +22,49 @@ const IntegrationLayout = () => {
 
   // --- HAM VERİLER (Sabit UI Yapısı) ---
   // Not: Bu veriler "tasarım" verisidir. Kullanıcının girdiği API Key'ler veritabanından gelecek.
-  const [apps, setApps] = useState([
+  const baseApps = useMemo(() => ([
     ...(typeof ecommerceData !== 'undefined' ? ecommerceData : []),
     ...(typeof marketplaceData !== 'undefined' ? marketplaceData : []),
     ...(typeof logisticsData !== 'undefined' ? logisticsData : []),
     ...(typeof accountingData !== 'undefined' ? accountingData : []),
     ...(typeof paymentData !== 'undefined' ? paymentData : [])
-  ]);
+  ]), []);
+  const [integrationData, setIntegrationData] = useState({});
+  const [liveLogs, setLiveLogs] = useState({});
 
   // UI State
-  const [selectedApp, setSelectedApp] = useState(null);
+  const [selectedAppId, setSelectedAppId] = useState(null);
+  const [selectedAppDraft, setSelectedAppDraft] = useState(null);
   const [modalTab, setModalTab] = useState('general'); 
   const [showApiKey, setShowApiKey] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   // --- VERİTABANI BAĞLANTISI ---
   useEffect(() => {
     const unsubscribe = subscribeToIntegrations((data) => {
-      // Veritabanından gelen verileri, mevcut uygulama listesiyle birleştir
-      setApps(prevApps => prevApps.map(app => {
-        const savedData = data[app.id]; // Örn: data['trendyol']
-        if (savedData) {
-          return { ...app, ...savedData }; // Kayıtlı verileri (fields, status vb.) üzerine yaz
-        }
-        return app;
-      }));
+      setIntegrationData(data || {});
     });
     return () => unsubscribe();
   }, []);
+
+  const apps = useMemo(() => {
+    return baseApps.map(app => ({
+      ...app,
+      ...(integrationData[app.id] || {}),
+      logs: liveLogs[app.id] || app.logs || []
+    }));
+  }, [baseApps, integrationData, liveLogs]);
+
+  const selectedApp = useMemo(() => {
+    if (!selectedAppId) return null;
+    if (selectedAppDraft?.id === selectedAppId) return selectedAppDraft;
+    return apps.find(app => app.id === selectedAppId) || null;
+  }, [apps, selectedAppDraft, selectedAppId]);
+
+  const connectedApps = useMemo(() => {
+    return baseApps
+      .map(app => ({ ...app, ...(integrationData[app.id] || {}) }))
+      .filter(app => app.status === 'connected');
+  }, [baseApps, integrationData]);
 
   const showToast = (message, type = 'success') => {
     const id = Date.now();
@@ -59,33 +75,31 @@ const IntegrationLayout = () => {
   // --- CANLI LOG SİMÜLASYONU ---
   useEffect(() => {
     const interval = setInterval(() => {
-      setApps(prevApps => prevApps.map(app => {
-        if (app.status === 'connected' && Math.random() > 0.8) {
-          const actions = ['Sipariş Çekildi', 'Stok Eşitlendi', 'Fiyat Değişti', 'Müşteri Güncellendi', 'Webhook Tetiklendi'];
-          const randomAction = actions[Math.floor(Math.random()*actions.length)];
-          const newLog = { 
-            time: new Date().toLocaleTimeString('tr-TR'), 
-            msg: `${randomAction} (#${Math.floor(1000 + Math.random()*9000)})`, 
-            status: 'success'
-          };
-          // Logları veritabanına kaydetmiyoruz (çok fazla yazma işlemi olur), sadece o anlık gösteriyoruz.
-          return { ...app, logs: [newLog, ...(app.logs || [])].slice(0, 100) };
-        }
-        return app;
-      }));
-    }, 1500);
-    return () => clearInterval(interval);
-  }, []);
+      setLiveLogs(prevLogs => {
+        let didChange = false;
+        const nextLogs = { ...prevLogs };
 
-  // Modal Log Senkronizasyonu
-  useEffect(() => {
-    if (selectedApp) {
-      const liveApp = apps.find(a => a.id === selectedApp.id);
-      if (liveApp && (liveApp.logs || []).length !== (selectedApp.logs || []).length) {
-        setSelectedApp(prev => ({ ...prev, logs: liveApp.logs }));
-      }
-    }
-  }, [apps, selectedApp]);
+        connectedApps.forEach(app => {
+          if (app.status === 'connected' && Math.random() > 0.8) {
+            const actions = ['Sipariş Çekildi', 'Stok Eşitlendi', 'Fiyat Değişti', 'Müşteri Güncellendi', 'Webhook Tetiklendi'];
+            const randomAction = actions[Math.floor(Math.random() * actions.length)];
+            const newLog = {
+              time: new Date().toLocaleTimeString('tr-TR'),
+              msg: `${randomAction} (#${Math.floor(1000 + Math.random() * 9000)})`,
+              status: 'success'
+            };
+
+            nextLogs[app.id] = [newLog, ...(prevLogs[app.id] || app.logs || [])].slice(0, 100);
+            didChange = true;
+          }
+        });
+
+        return didChange ? nextLogs : prevLogs;
+      });
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [connectedApps]);
 
   useEffect(() => {
     if (logsEndRef.current) logsEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -95,7 +109,7 @@ const IntegrationLayout = () => {
   
   // 1. Standart Alan Güncelleme (Local State)
   const handleFieldChange = (key, value) => {
-    setSelectedApp(prev => ({
+    setSelectedAppDraft(prev => ({
       ...prev,
       fields: { ...prev.fields, [key]: value }
     }));
@@ -106,9 +120,18 @@ const IntegrationLayout = () => {
     return demoValue ? `Örnek değer: ${demoValue}` : `${key} giriniz...`;
   };
 
+
+  const handleManageApp = (app) => {
+    setSelectedAppId(app.id);
+    setSelectedAppDraft(app);
+    setModalTab('general');
+    setShowApiKey(false);
+  };
+
+
   // 2. Gelişmiş Ayar Güncelleme (Local State)
   const handleAdvancedChange = (key, value) => {
-    setSelectedApp(prev => ({
+    setSelectedAppDraft(prev => ({
       ...prev,
       advancedSettings: {
         ...prev.advancedSettings,
@@ -144,7 +167,7 @@ const IntegrationLayout = () => {
           status: 'connected', 
           logs: [{time: 'Şimdi', msg: 'Bağlantı Başarılı 🟢', status: 'success'}, ...(selectedApp.logs || [])] 
         };
-        setSelectedApp(updatedApp);
+        setSelectedAppDraft(updatedApp);
         
         setIsConnecting(false);
         showToast(`${selectedApp.name} bağlandı ve kaydedildi!`);
@@ -173,7 +196,7 @@ const IntegrationLayout = () => {
         await saveIntegration(selectedApp.id, dataToSave);
 
         const updatedApp = { ...selectedApp, ...dataToSave };
-        setSelectedApp(updatedApp);
+        setSelectedAppDraft(updatedApp);
         showToast("Bağlantı kesildi.", "error");
       } catch (error) {
         showToast("Hata: " + error.message, "error");
@@ -182,7 +205,7 @@ const IntegrationLayout = () => {
   };
 
   const handleTogglePermission = (key) => {
-    setSelectedApp(prev => ({
+    setSelectedAppDraft(prev => ({
       ...prev,
       permissions: { ...prev.permissions, [key]: !prev.permissions[key] }
     }));
@@ -199,7 +222,8 @@ const IntegrationLayout = () => {
         updatedAt: new Date().toISOString()
       };
       await saveIntegration(selectedApp.id, dataToSave);
-      setSelectedApp(null); // Modalı kapat
+      setSelectedAppId(null);
+      setSelectedAppDraft(null); // Modalı kapat
       showToast("Ayarlar kaydedildi.");
     } catch (error) {
       showToast("Hata: " + error.message, "error");
@@ -207,7 +231,9 @@ const IntegrationLayout = () => {
   };
 
   const clearLogs = () => {
-    setSelectedApp(prev => ({ ...prev, logs: [] }));
+    if (!selectedApp) return;
+    setLiveLogs(prev => ({ ...prev, [selectedApp.id]: [] }));
+    setSelectedAppDraft(prev => prev ? { ...prev, logs: [] } : prev);
     showToast("Loglar temizlendi (Sadece yerel).");
   };
 
@@ -233,11 +259,11 @@ const IntegrationLayout = () => {
       {renderTabs()}
 
       <div className="min-h-[400px]">
-         {activeTab === 'E-Ticaret' && <EcommerceApps apps={apps} onManage={setSelectedApp} />}
-         {activeTab === 'Pazaryeri' && <MarketplaceApps apps={apps} onManage={setSelectedApp} />}
-         {activeTab === 'Lojistik' && <LogisticsApps apps={apps} onManage={setSelectedApp} />}
-         {activeTab === 'Muhasebe' && <AccountingApps apps={apps} onManage={setSelectedApp} />}
-         {activeTab === 'Ödeme' && <PaymentApps apps={apps} onManage={setSelectedApp} />}
+         {activeTab === 'E-Ticaret' && <EcommerceApps apps={apps} onManage={handleManageApp} />}
+         {activeTab === 'Pazaryeri' && <MarketplaceApps apps={apps} onManage={handleManageApp} />}
+         {activeTab === 'Lojistik' && <LogisticsApps apps={apps} onManage={handleManageApp} />}
+         {activeTab === 'Muhasebe' && <AccountingApps apps={apps} onManage={handleManageApp} />}
+         {activeTab === 'Ödeme' && <PaymentApps apps={apps} onManage={handleManageApp} />}
       </div>
 
       {/* --- GELİŞMİŞ ENTEGRASYON MODALI --- */}
@@ -383,7 +409,7 @@ const IntegrationLayout = () => {
             <div className="w-5/12 bg-[#0d1117] text-slate-300 flex flex-col font-mono text-xs border-l border-slate-800">
                <div className="p-5 border-b border-slate-800 flex justify-between items-center bg-[#161b22]">
                   <div className="flex items-center gap-2"><Terminal size={16} className="text-blue-400"/><span className="font-bold text-slate-200">Sistem Monitörü</span>{selectedApp.status === 'connected' && <span className="flex h-2 w-2 relative ml-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>}</div>
-                  <button onClick={() => setSelectedApp(null)} className="p-1 hover:bg-white/10 rounded"><X size={18} className="text-slate-500 hover:text-white"/></button>
+                  <button onClick={() => { setSelectedAppId(null); setSelectedAppDraft(null); }} className="p-1 hover:bg-white/10 rounded"><X size={18} className="text-slate-500 hover:text-white"/></button>
                </div>
                <div className="flex-1 p-5 overflow-y-auto custom-scrollbar space-y-3 font-mono">
                   {selectedApp.status === 'connected' ? (
