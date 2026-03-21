@@ -1,5 +1,5 @@
 // DOSYA ADI: src/firebase/teamService.js
-import { db, firebaseConfig } from "./firebaseconfig"; 
+import { db, firebaseConfig } from "./firebaseConfig"; 
 import { doc, setDoc, updateDoc, deleteDoc, collection, getDocs, getDoc } from "firebase/firestore";
 import { initializeApp, deleteApp, getApps } from "firebase/app"; 
 import { getAuth, createUserWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";

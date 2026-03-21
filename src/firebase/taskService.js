@@ -1,4 +1,4 @@
-import { db } from "./firebaseconfig";
+import { db } from "./firebaseConfig";
 import { sendNotification } from './notificationService'; // Bildirim servisi import edildi
 import { 
   collection, addDoc, updateDoc, deleteDoc, doc, 
