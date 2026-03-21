@@ -78,6 +78,53 @@ const StaffDetailModal = ({ person, onClose, canSeeDetails }) => {
   );
 };
 
+
+const getTierRate = (tiers = [], achievementRate = 0) => {
+  const matchedTier = tiers.find(t => achievementRate >= t.min && achievementRate <= t.max);
+  if (matchedTier) return matchedTier.rate;
+
+  if (achievementRate > 0) {
+    const maxTier = tiers[tiers.length - 1];
+    if (maxTier && achievementRate > maxTier.max) return maxTier.rate;
+  }
+
+  return 0;
+};
+
+const getManualBonusRate = (manualBonuses = [], manualRatio = 0) => {
+  const matchedBonus = manualBonuses.find(b => manualRatio >= b.minRatio && manualRatio <= b.maxRatio);
+  if (matchedBonus) return matchedBonus.extraRate;
+
+  const maxBonus = manualBonuses[manualBonuses.length - 1];
+  if (maxBonus && manualRatio > maxBonus.maxRatio) return maxBonus.extraRate;
+
+  return 0;
+};
+
+const calculateCommissionMetrics = ({ webSales = 0, manualSales = 0, targetRevenue = 0, rules = null, includeLeaderBonus = false }) => {
+  const totalRevenue = Number(webSales) + Number(manualSales);
+  const achievementRate = targetRevenue > 0 ? (totalRevenue / targetRevenue) * 100 : 0;
+  const baseRate = getTierRate(rules?.tiers, achievementRate);
+  const manualRatio = totalRevenue > 0 ? (Number(manualSales) / totalRevenue) * 100 : 0;
+  const bonusRate = getManualBonusRate(rules?.manualBonuses, manualRatio);
+  const baseCommissionAmount = totalRevenue * (baseRate / 100);
+  const bonusCommissionAmount = Number(manualSales) * (bonusRate / 100);
+  const leaderBonusAmount = includeLeaderBonus && rules?.isLeaderBonusActive
+    ? Number(manualSales) * ((Number(rules.leaderBonus) || 0) / 100)
+    : 0;
+
+  return {
+    totalRevenue,
+    achievementRate,
+    baseRate,
+    bonusRate,
+    baseCommissionAmount,
+    bonusCommissionAmount,
+    leaderBonusAmount,
+    totalPayout: baseCommissionAmount + bonusCommissionAmount + leaderBonusAmount,
+  };
+};
+
 const SocialMediaCommission = () => {
   const { currentUser, userData } = useAuth();
   
@@ -99,16 +146,6 @@ const SocialMediaCommission = () => {
   // Kurallar
   const [rules, setRules] = useState(null);
   
-  // Hesaplananlar (Kişisel - Anlık Gösterim İçin)
-  const [totalRevenue, setTotalRevenue] = useState(0);
-  const [achievementRate, setAchievementRate] = useState(0);
-  const [baseRate, setBaseRate] = useState(0); 
-  const [bonusRate, setBonusRate] = useState(0); 
-  
-  // Tutarlar (Kişisel)
-  const [baseCommissionAmount, setBaseCommissionAmount] = useState(0);
-  const [bonusCommissionAmount, setBonusCommissionAmount] = useState(0);
-  const [leaderBonusAmount, setLeaderBonusAmount] = useState(0);
 
   // YETKİ KONTROLÜ
   const isAuthorized = ['Admin', 'Manager', 'Director', 'CEO'].includes(userData?.role);
@@ -191,51 +228,23 @@ const SocialMediaCommission = () => {
     fetchData();
   }, [currentDate, currentUser, isSimulationMode, rules]);
 
-  // 3. HESAPLAMA MOTORU (Kişisel Inputlar için)
-  useEffect(() => {
-    if (!rules) return;
+  const personalMetrics = useMemo(() => calculateCommissionMetrics({
+    webSales,
+    manualSales,
+    targetRevenue,
+    rules,
+    includeLeaderBonus: true
+  }), [webSales, manualSales, targetRevenue, rules]);
 
-    const total = Number(webSales) + Number(manualSales);
-    setTotalRevenue(total);
-
-    // A. Hedef Başarısı
-    const rate = targetRevenue > 0 ? (total / targetRevenue) * 100 : 0;
-    setAchievementRate(rate);
-
-    // B. Baz Prim Oranı
-    let bRate = 0;
-    if(rules.tiers) {
-        const matchedTier = rules.tiers.find(t => rate >= t.min && rate <= t.max);
-        if (matchedTier) bRate = matchedTier.rate;
-        else if (rate > 0) {
-           const maxTier = rules.tiers[rules.tiers.length - 1];
-           if (maxTier && rate > maxTier.max) bRate = maxTier.rate;
-        }
-    }
-    setBaseRate(bRate);
-
-    // C. Manuel Bonus Oranı
-    const mRatio = total > 0 ? (Number(manualSales) / total) * 100 : 0;
-    let bnsRate = 0;
-    if(rules.manualBonuses) {
-        const matchedBonus = rules.manualBonuses.find(b => mRatio >= b.minRatio && mRatio <= b.maxRatio);
-        if (matchedBonus) bnsRate = matchedBonus.extraRate;
-        const maxBonus = rules.manualBonuses[rules.manualBonuses.length - 1];
-        if (maxBonus && mRatio > maxBonus.maxRatio) bnsRate = maxBonus.extraRate;
-    }
-    setBonusRate(bnsRate);
-
-    // D. Tutarlar
-    const baseComm = total * (bRate / 100);
-    const bonusComm = Number(manualSales) * (bnsRate / 100);
-    setBaseCommissionAmount(baseComm);
-    setBonusCommissionAmount(bonusComm);
-    
-    // Lider Bonusu (Kişisel ekran için tahmini)
-    const leaderRate = rules.isLeaderBonusActive ? (rules.leaderBonus / 100) : 0;
-    setLeaderBonusAmount(Number(manualSales) * leaderRate);
-
-  }, [targetRevenue, webSales, manualSales, rules]);
+  const {
+    totalRevenue,
+    achievementRate,
+    baseRate,
+    bonusRate,
+    baseCommissionAmount,
+    bonusCommissionAmount,
+    leaderBonusAmount
+  } = personalMetrics;
 
   // 4. LİSTE HESAPLAMASI (Tüm personel için kuralları uygula)
   const teamList = useMemo(() => {
@@ -243,39 +252,17 @@ const SocialMediaCommission = () => {
 
     // A. Her personel için primleri tekrar hesapla
     const calculatedList = mergedStaffData.map(p => {
-        const total = (p.webSales || 0) + (p.manualSales || 0);
-        const rate = targetRevenue > 0 ? (total / targetRevenue) * 100 : 0;
-        
-        // Baz Prim
-        let bRate = 0;
-        if(rules.tiers) {
-            const matchedTier = rules.tiers.find(t => rate >= t.min && rate <= t.max);
-            if (matchedTier) bRate = matchedTier.rate;
-            else if (rate > 0) {
-               const maxTier = rules.tiers[rules.tiers.length - 1];
-               if (maxTier && rate > maxTier.max) bRate = maxTier.rate;
-            }
-        }
-
-        // Manuel Bonus
-        const mRatio = total > 0 ? (p.manualSales / total) * 100 : 0;
-        let bnsRate = 0;
-        if(rules.manualBonuses) {
-            const matchedBonus = rules.manualBonuses.find(b => mRatio >= b.minRatio && mRatio <= b.maxRatio);
-            if (matchedBonus) bnsRate = matchedBonus.extraRate;
-            const maxBonus = rules.manualBonuses[rules.manualBonuses.length - 1];
-            if (maxBonus && mRatio > maxBonus.maxRatio) bnsRate = maxBonus.extraRate;
-        }
-
-        const baseComm = total * (bRate / 100);
-        const bonusComm = (p.manualSales || 0) * (bnsRate / 100);
+        const metrics = calculateCommissionMetrics({
+            webSales: p.webSales || 0,
+            manualSales: p.manualSales || 0,
+            targetRevenue,
+            rules
+        });
 
         return {
             ...p,
-            totalRevenue: total,
-            baseCommissionAmount: baseComm,
-            bonusCommissionAmount: bonusComm,
-            rawTotal: baseComm + bonusComm // Lider bonusu hariç
+            ...metrics,
+            rawTotal: metrics.totalPayout
         };
     });
 
