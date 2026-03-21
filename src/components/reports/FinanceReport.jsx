@@ -18,6 +18,18 @@ const FinanceReport = () => {
     setDateRange,
     transactions,
   } = useFinanceReportViewModel();
+
+const FinanceReport = () => {
+  const {
+    activeTab,
+    dateRange,
+    financialData,
+    handleExport,
+    loading,
+    setActiveTab,
+    setDateRange,
+    transactions,
+  } = useFinanceReportViewModel();
 import React, { useState } from 'react';
 import React, { useMemo, useState } from 'react';
 import { 
