@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { RefreshCw, Save, Upload, Download, Calendar, FileSpreadsheet } from 'lucide-react';
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
@@ -17,6 +18,53 @@ const ScenarioPlanner = () => {
     fixedCost: 20000
   });
 
+  const { results, summary } = useMemo(() => {
+    const [year, month] = scenarioDate.split('-').map(Number);
+    let currentData = new Date(year, month - 1, 1);
+
+    let totalRev = 0;
+    let totalProf = 0;
+
+    const computedResults = Array.from({ length: 6 }).map((_, index) => {
+      const monthName = currentData.toLocaleDateString('tr-TR', { month: 'long', year: '2-digit' });
+      currentData.setMonth(currentData.getMonth() + 1);
+
+      const growthFactor = 1 + (index * 0.10);
+      const monthlyBudget = inputs.marketingBudget * growthFactor;
+      const traffic = monthlyBudget / inputs.cpc;
+      const orders = traffic * (inputs.conversionRate / 100);
+      const netOrders = orders * (1 - inputs.returnRate / 100);
+      const revenue = netOrders * inputs.aov;
+      const cogs = revenue * (inputs.cogsRate / 100);
+      const shippingCost = orders * inputs.shippingAvg;
+      const totalVariableCost = cogs + shippingCost + monthlyBudget;
+      const profit = revenue - totalVariableCost - inputs.fixedCost;
+      const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+
+      totalRev += revenue;
+      totalProf += profit;
+
+      return {
+        month: monthName,
+        revenue,
+        traffic: Math.round(traffic),
+        netOrders: Math.round(netOrders),
+        marketingCost: monthlyBudget,
+        totalCost: totalVariableCost + inputs.fixedCost,
+        profit,
+        margin
+      };
+    });
+
+    return {
+      results: computedResults,
+      summary: {
+        revenue: totalRev,
+        profit: totalProf,
+        margin: totalRev > 0 ? (totalProf / totalRev) * 100 : 0
+      }
+    };
+  }, [inputs, scenarioDate]);
 
   // 2. EXCEL İŞLEMLERİ
   
