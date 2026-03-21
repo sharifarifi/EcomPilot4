@@ -3,14 +3,39 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
+const requiredFirebaseEnvVars = [
+  "VITE_FIREBASE_API_KEY",
+  "VITE_FIREBASE_AUTH_DOMAIN",
+  "VITE_FIREBASE_PROJECT_ID",
+  "VITE_FIREBASE_STORAGE_BUCKET",
+  "VITE_FIREBASE_MESSAGING_SENDER_ID",
+  "VITE_FIREBASE_APP_ID",
+];
+
+const missingFirebaseEnvVars = requiredFirebaseEnvVars.filter((envVar) => {
+  const value = import.meta.env[envVar];
+  return typeof value !== "string" || value.trim() === "";
+});
+
+if (missingFirebaseEnvVars.length > 0) {
+  throw new Error(
+    [
+      "Firebase yapılandırması eksik veya geçersiz.",
+      "Aşağıdaki Vite environment değişkenlerini tanımlayın:",
+      ...missingFirebaseEnvVars.map((envVar) => `- ${envVar}`),
+      "Örnek: .env.local veya dağıtım ortamı değişkenleri.",
+    ].join("\n")
+  );
+}
+
 // 'export' kelimesi KRİTİK ÖNEME SAHİPTİR.
 export const firebaseConfig = {
-  apiKey: "AIzaSyDzN7UmABmW6-n41EE5hdDG3KjA_zb8nBA",
-  authDomain: "ecom-prototip.firebaseapp.com",
-  projectId: "ecom-prototip",
-  storageBucket: "ecom-prototip.firebasestorage.app",
-  messagingSenderId: "873085135670",
-  appId: "1:873085135670:web:7b760ccfaa97d7bd136197"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 // Uygulamayı başlat
