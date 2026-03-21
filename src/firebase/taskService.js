@@ -73,6 +73,28 @@ export const subscribeToTasks = (callback) => (
 );
 
 export const addTask = async (taskData) => {
+
+const SERVICE_NAME = 'taskService';
+const TASKS_COLLECTION = FIRESTORE_COLLECTIONS.tasks;
+
+const createTaskLogEntry = (text, user = 'Sistem') => ({
+  id: Date.now(),
+  user,
+  text,
+  type: 'log',
+  time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
+});
+
+export const subscribeToTasks = (callback) => (
+  subscribeToCollection({
+    service: SERVICE_NAME,
+    collectionName: TASKS_COLLECTION,
+    callback,
+    defaultOrderBy: { field: 'createdAt', direction: 'desc' },
+  })
+);
+
+export const addTask = async (taskData) => {
   await addCollectionDocument(SERVICE_NAME, TASKS_COLLECTION, {
     ...taskData,
     status: 'Bekliyor',
@@ -172,6 +194,9 @@ export const updateTaskStatus = async (taskId, newStatus, userName) => {
     status: newStatus,
     comments: arrayUnion(createTaskLogEntry(`${userName} durumu değiştirdi: ${newStatus}`)),
   });
+};
+
+export const addTaskComment = async (taskId, comment) => {
 };
 
 export const addTaskComment = async (taskId, comment) => {

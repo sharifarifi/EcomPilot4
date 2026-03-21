@@ -41,6 +41,17 @@ export const subscribeToOrders = (callback) => (
 );
 
 export const addOrder = async (orderData) => {
+
+export const subscribeToOrders = (callback) => (
+  subscribeToCollection({
+    service: SERVICE_NAME,
+    collectionName: ORDERS_COLLECTION,
+    callback,
+    defaultOrderBy: { field: 'createdAt', direction: 'desc' },
+  })
+);
+
+export const addOrder = async (orderData) => {
 import { query, orderBy, serverTimestamp } from 'firebase/firestore';
 import {
   FIRESTORE_PATHS,
