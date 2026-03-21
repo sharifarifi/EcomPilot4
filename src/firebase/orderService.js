@@ -1,57 +1,38 @@
-import { db } from "./firebaseConfig";
-import { 
-  collection, addDoc, updateDoc, deleteDoc, doc, 
-  onSnapshot, query, orderBy, serverTimestamp 
-} from "firebase/firestore";
+import { FIRESTORE_COLLECTIONS } from './firestorePaths';
+import {
+  addCollectionDocument,
+  deleteCollectionDocument,
+  subscribeToCollection,
+  updateCollectionDocument,
+} from './firestoreService';
 
-const ORDERS_COLLECTION = "orders";
+const SERVICE_NAME = 'orderService';
+const ORDERS_COLLECTION = FIRESTORE_COLLECTIONS.orders;
 
-// --- SİPARİŞLERİ DİNLE (Gerçek Zamanlı) ---
-export const subscribeToOrders = (callback) => {
-  const q = query(collection(db, ORDERS_COLLECTION), orderBy("createdAt", "desc"));
-  return onSnapshot(q, (snapshot) => {
-    const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    callback(orders);
+export const subscribeToOrders = (callback) => (
+  subscribeToCollection({
+    service: SERVICE_NAME,
+    collectionName: ORDERS_COLLECTION,
+    callback,
+    defaultOrderBy: { field: 'createdAt', direction: 'desc' },
+  })
+);
+
+export const addOrder = async (orderData) => {
+  await addCollectionDocument(SERVICE_NAME, ORDERS_COLLECTION, {
+    ...orderData,
+    status: 'Onaylandı',
   });
 };
 
-// --- SİPARİŞ EKLE ---
-export const addOrder = async (orderData) => {
-  try {
-    await addDoc(collection(db, ORDERS_COLLECTION), {
-      ...orderData,
-      status: 'Onaylandı', // Varsayılan durum
-      createdAt: serverTimestamp()
-    });
-  } catch (error) {
-    console.error("Sipariş ekleme hatası:", error);
-    throw error;
-  }
-};
-
-// --- SİPARİŞ GÜNCELLE ---
 export const updateOrder = async (orderId, updatedData) => {
-  try {
-    const orderRef = doc(db, ORDERS_COLLECTION, orderId);
-    await updateDoc(orderRef, updatedData);
-  } catch (error) {
-    console.error("Sipariş güncelleme hatası:", error);
-    throw error;
-  }
+  await updateCollectionDocument(SERVICE_NAME, ORDERS_COLLECTION, orderId, updatedData);
 };
 
-// --- DURUM GÜNCELLE ---
 export const updateOrderStatus = async (orderId, newStatus) => {
-  const orderRef = doc(db, ORDERS_COLLECTION, orderId);
-  await updateDoc(orderRef, { status: newStatus });
+  await updateCollectionDocument(SERVICE_NAME, ORDERS_COLLECTION, orderId, { status: newStatus });
 };
 
-// --- SİL ---
 export const deleteOrder = async (orderId) => {
-  await deleteDoc(doc(db, ORDERS_COLLECTION, orderId));
-  try {
-    await deleteDoc(doc(db, ORDERS_COLLECTION, orderId));
-  } catch (error) {
-    throw error;
-  }
+  await deleteCollectionDocument(SERVICE_NAME, ORDERS_COLLECTION, orderId);
 };

@@ -72,6 +72,34 @@ const campaignRoiData = [
   { code: 'SEPET10', ciro: 85000, indirimMaliyeti: 8500, roi: 10.0 }, 
 ];
 
+
+const SalesCustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload || !payload.length) return null;
+
+  return (
+    <div className="bg-slate-900/95 backdrop-blur-sm text-white p-4 rounded-xl shadow-2xl border border-slate-700 text-sm z-50 min-w-[160px]">
+      <p className="font-bold mb-3 border-b border-slate-700 pb-2 text-slate-300">{label}</p>
+      {payload.map((entry, index) => {
+        const entryName = entry.name.toLowerCase();
+        const isMoney = entryName.includes('ciro') || entryName.includes('kar') || entryName.includes('maliyet');
+        const isPercent = entryName.includes('oran') || entryName.includes('marj');
+
+        return (
+          <div key={index} className="flex items-center justify-between gap-6 py-1">
+            <span className="flex items-center gap-2">
+              <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }}></div>
+              <span className="text-slate-200 font-medium">{entry.name}:</span>
+            </span>
+            <span className="font-black text-white">
+              {isMoney ? `₺${entry.value.toLocaleString()}` : isPercent ? `%${entry.value}` : entry.value}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 const SalesReport = () => {
   const [activeTab, setActiveTab] = useState('finance'); 
 
@@ -117,31 +145,6 @@ const SalesReport = () => {
     document.body.removeChild(link);
   };
 
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-slate-900/95 backdrop-blur-sm text-white p-4 rounded-xl shadow-2xl border border-slate-700 text-sm z-50 min-w-[160px]">
-          <p className="font-bold mb-3 border-b border-slate-700 pb-2 text-slate-300">{label}</p>
-          {payload.map((entry, index) => {
-            const isMoney = entry.name.toLowerCase().includes('ciro') || entry.name.toLowerCase().includes('kar') || entry.name.toLowerCase().includes('maliyet');
-            const isPercent = entry.name.toLowerCase().includes('oran') || entry.name.toLowerCase().includes('marj');
-            return (
-                <div key={index} className="flex items-center justify-between gap-6 py-1">
-                <span className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                    <span className="text-slate-200 font-medium">{entry.name}:</span>
-                </span>
-                <span className="font-black text-white">
-                    {isMoney ? `₺${entry.value.toLocaleString()}` : isPercent ? `%${entry.value}` : entry.value}
-                </span>
-                </div>
-            )
-          })}
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-20">
@@ -227,7 +230,7 @@ const SalesReport = () => {
                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b', fontWeight: 'bold'}} dy={10} />
                              <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#94A3B8'}} tickFormatter={(val) => `₺${val/1000}k`} />
-                             <Tooltip content={<CustomTooltip />} />
+                             <Tooltip content={<SalesCustomTooltip />} />
                              <Area yAxisId="left" type="monotone" dataKey="ciro" name="Brüt Ciro" stroke="#3B82F6" fill="url(#colorCiro)" strokeWidth={2} />
                              <Bar yAxisId="left" dataKey="netKar" name="Net Kar" fill="#10B981" radius={[4, 4, 0, 0]} barSize={32} />
                           </ComposedChart>
@@ -245,7 +248,7 @@ const SalesReport = () => {
                              <Pie data={costBreakdownData} cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={2} dataKey="value" stroke="none">
                                 {costBreakdownData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                              </Pie>
-                             <Tooltip content={<CustomTooltip />} />
+                             <Tooltip content={<SalesCustomTooltip />} />
                           </PieChart>
                        </ResponsiveContainer>
                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -362,7 +365,7 @@ const SalesReport = () => {
                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b', fontWeight: 'bold'}} dy={10} />
                              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#94A3B8'}} tickFormatter={(val) => `%${val}`} />
-                             <Tooltip cursor={{fill: '#f8fafc'}} content={<CustomTooltip />} />
+                             <Tooltip cursor={{fill: '#f8fafc'}} content={<SalesCustomTooltip />} />
                              {/* Ürün oranı barı */}
                              <Bar dataKey="urunOrani" name="Katalogdaki Payı (%)" fill="#CBD5E1" radius={[4, 4, 0, 0]} barSize={20} />
                              {/* Ciro Katkısı Barı */}
@@ -468,7 +471,7 @@ const SalesReport = () => {
                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                              <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b', fontWeight: 'bold'}} dy={10} />
                              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#A855F7', fontWeight: 'bold'}} tickFormatter={(val) => `₺${val}`} />
-                             <Tooltip content={<CustomTooltip />} />
+                             <Tooltip content={<SalesCustomTooltip />} />
                              <Area type="monotone" dataKey="aov" name="Sepet Tutarı" stroke="#A855F7" strokeWidth={4} fillOpacity={1} fill="url(#colorCost)" activeDot={{ r: 6, fill: '#9333EA', stroke: '#fff', strokeWidth: 2 }} />
                           </ComposedChart>
                        </ResponsiveContainer>
@@ -490,7 +493,7 @@ const SalesReport = () => {
                              <XAxis dataKey="code" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#475569', fontWeight: 'bold'}} dy={10} />
                              <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#3B82F6'}} tickFormatter={(val) => `₺${val/1000}k`} />
                              <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#EF4444'}} tickFormatter={(val) => `₺${val/1000}k`} />
-                             <Tooltip content={<CustomTooltip />} />
+                             <Tooltip content={<SalesCustomTooltip />} />
                              <Bar yAxisId="left" dataKey="ciro" name="Getirdiği Ciro" fill="#3B82F6" radius={[4, 4, 0, 0]} barSize={40} />
                              <Line yAxisId="right" type="monotone" dataKey="indirimMaliyeti" name="Feragat Edilen Kar (Maliyet)" stroke="#EF4444" strokeWidth={3} dot={{ r: 5, fill: '#EF4444', strokeWidth: 2, stroke: '#fff' }} />
                           </ComposedChart>

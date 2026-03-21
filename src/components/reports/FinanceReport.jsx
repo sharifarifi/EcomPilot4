@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Wallet, TrendingUp, TrendingDown, DollarSign, Calendar, 
   Download, ChevronDown, PieChart, ArrowUpRight, ArrowDownRight,
   FileText, Filter, CreditCard, Banknote, Landmark, Target,
   Percent, ArrowRight, Printer, Share2, CheckCircle, Clock, AlertCircle // <-- EKLENEN İKONLAR
 } from 'lucide-react';
+import { financeReportFinancialData, financeReportTransactions } from '../../demo-data/financeReport';
 
 // --- YARDIMCI BİLEŞENLER ---
 
 // 1. Premium Finans Kartı
-const FinanceCard = ({ title, value, subValue, change, trend, icon: Icon, color, loading, target }) => (
+const FinanceCard = ({ title, value, subValue, change, trend, icon, color, loading, target }) => (
   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group relative overflow-hidden h-full flex flex-col justify-between">
     {loading ? (
       <div className="animate-pulse space-y-3">
@@ -21,7 +22,7 @@ const FinanceCard = ({ title, value, subValue, change, trend, icon: Icon, color,
       <>
         <div className="flex justify-between items-start mb-2 relative z-10">
            <div className={`p-3 rounded-xl bg-${color}-50 text-${color}-600 border border-${color}-100 transition-transform group-hover:scale-110`}>
-              <Icon size={22} />
+              {React.createElement(icon, { size: 22 })}
            </div>
            <div className="text-right">
               <span className={`flex items-center justify-end gap-1 text-xs font-bold ${trend === 'up' ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -34,6 +35,7 @@ const FinanceCard = ({ title, value, subValue, change, trend, icon: Icon, color,
         <div className="relative z-10 mt-2">
            <h3 className="text-3xl font-black text-slate-800 tracking-tight">{value}</h3>
            <p className="text-sm font-medium text-slate-500">{title}</p>
+           <p className="text-xs text-slate-400 mt-1">{subValue}</p>
         </div>
 
         {/* Bütçe Hedef Barı */}
@@ -49,7 +51,7 @@ const FinanceCard = ({ title, value, subValue, change, trend, icon: Icon, color,
 
         {/* Arkaplan İkonu */}
         <div className={`absolute -bottom-6 -right-6 p-4 opacity-[0.03] text-${color}-900 transform rotate-12 scale-150 pointer-events-none`}>
-           <Icon size={120} />
+           {React.createElement(icon, { size: 120 })}
         </div>
       </>
     )}
@@ -124,38 +126,12 @@ const CompositeChart = ({ data, loading }) => {
 // --- ANA BİLEŞEN ---
 const FinanceReport = () => {
   const [dateRange, setDateRange] = useState('Bu Yıl');
-  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview'); 
 
-  // --- MOCK DATA ---
-  const financialData = [
-    { label: 'Oca', revenue: 120, expense: 90, profit: 30 }, 
-    { label: 'Şub', revenue: 150, expense: 100, profit: 50 },
-    { label: 'Mar', revenue: 180, expense: 110, profit: 70 }, 
-    { label: 'Nis', revenue: 220, expense: 140, profit: 80 },
-    { label: 'May', revenue: 250, expense: 130, profit: 120 }, 
-    { label: 'Haz', revenue: 300, expense: 160, profit: 140 },
-    { label: 'Tem', revenue: 280, expense: 150, profit: 130 }, 
-    { label: 'Ağu', revenue: 320, expense: 180, profit: 140 },
-    { label: 'Eyl', revenue: 350, expense: 200, profit: 150 }, 
-    { label: 'Eki', revenue: 380, expense: 210, profit: 170 },
-    { label: 'Kas', revenue: 450, expense: 240, profit: 210 }, 
-    { label: 'Ara', revenue: 500, expense: 280, profit: 220 }
-  ];
+  const financialData = financeReportFinancialData;
+  const transactions = financeReportTransactions;
 
-  const transactions = [
-    { id: 'TX-9921', desc: 'Shopify Satış Geliri', cat: 'Satış', date: 'Bugün, 14:30', amount: 12450, type: 'in', status: 'Tamamlandı' },
-    { id: 'TX-9920', desc: 'Meta Ads Reklam', cat: 'Pazarlama', date: 'Bugün, 11:00', amount: -4200, type: 'out', status: 'Tamamlandı' },
-    { id: 'TX-9919', desc: 'Yurtiçi Kargo', cat: 'Lojistik', date: 'Dün, 16:45', amount: -1850, type: 'out', status: 'Bekliyor' },
-    { id: 'TX-9918', desc: 'Trendyol Hakediş', cat: 'Satış', date: 'Dün, 09:15', amount: 8900, type: 'in', status: 'Tamamlandı' },
-    { id: 'TX-9917', desc: 'AWS Sunucu', cat: 'Altyapı', date: '20 Mar', amount: -450, type: 'out', status: 'Tamamlandı' },
-  ];
-
-  useEffect(() => {
-    setLoading(true);
-    const t = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(t);
-  }, [dateRange]);
+  const loading = false;
 
   const handleExport = () => {
     alert("Finansal Rapor (XLSX) hazırlanıyor...");
