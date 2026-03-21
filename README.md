@@ -1,23 +1,112 @@
-## Auth / Authorization Boundaries
+## 2.4 Auth / Authorization Sınırları
 
-- **Frontend auth checks**
-  - `AuthGuard` renders the main app only when `currentUser` exists; otherwise it shows the login screen. (`src/App.jsx`)​:codex-file-citation[codex-file-citation]{line_range_start=333 line_range_end=358 path=src/App.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/App.jsx#L333-L358"}​
-  - `login` first signs in with Firebase Auth, then checks for a matching `team_members/{uid}` document; if that document is missing, it signs the user out and throws an access error. (`src/context/AuthContext.jsx`)​:codex-file-citation[codex-file-citation]{line_range_start=21 line_range_end=38 path=src/context/AuthContext.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/context/AuthContext.jsx#L21-L38"}​
-  - On auth state changes, the app reloads the same `team_members/{uid}` document and clears the session if the document is missing. (`src/context/AuthContext.jsx`)​:codex-file-citation[codex-file-citation]{line_range_start=45 line_range_end=70 path=src/context/AuthContext.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/context/AuthContext.jsx#L45-L70"}​
-  - The login form calls the shared `login` function from `AuthContext`. (`src/components/Login.jsx`)​:codex-file-citation[codex-file-citation]{line_range_start=5 line_range_end=24 path=src/components/Login.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/components/Login.jsx#L5-L24"}​
-  - Several frontend views apply role-based checks from `userData?.role`, for example:
-    - Retail commission: `['Admin', 'Manager', 'Director', 'CEO']`. (`src/components/commission/RetailCommission.jsx`)​:codex-file-citation[codex-file-citation]{line_range_start=27 line_range_end=31 path=src/components/commission/RetailCommission.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/components/commission/RetailCommission.jsx#L27-L31"}​​:codex-file-citation[codex-file-citation]{line_range_start=59 line_range_end=60 path=src/components/commission/RetailCommission.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/components/commission/RetailCommission.jsx#L59-L60"}​
-    - Social media commission: `['Admin', 'Manager', 'Director', 'CEO']`. (`src/components/commission/SocialMediaCommission.jsx`)​:codex-file-citation[codex-file-citation]{line_range_start=113 line_range_end=115 path=src/components/commission/SocialMediaCommission.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/components/commission/SocialMediaCommission.jsx#L113-L115"}​
-    - Operation commission: `['Admin', 'Manager', 'Director', 'CEO', 'Operations Manager']`. (`src/components/commission/OperationCommission.jsx`)​:codex-file-citation[codex-file-citation]{line_range_start=116 line_range_end=118 path=src/components/commission/OperationCommission.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/components/commission/OperationCommission.jsx#L116-L118"}​
-    - Planning/reporting screens use manager-style role checks and/or restrict records to the signed-in user's `uid`. (`src/components/planning/TaskBoard.jsx`, `src/components/planning/LeaveManager.jsx`, `src/components/planning/ShiftManager.jsx`, `src/components/planning/WorkReport.jsx`, `src/components/common/NotificationBell.jsx`)​:codex-file-citation[codex-file-citation]{line_range_start=11 line_range_end=14 path=src/components/planning/TaskBoard.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/components/planning/TaskBoard.jsx#L11-L14"}​​:codex-file-citation[codex-file-citation]{line_range_start=54 line_range_end=61 path=src/components/planning/TaskBoard.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/components/planning/TaskBoard.jsx#L54-L61"}​​:codex-file-citation[codex-file-citation]{line_range_start=16 line_range_end=19 path=src/components/planning/LeaveManager.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/components/planning/LeaveManager.jsx#L16-L19"}​​:codex-file-citation[codex-file-citation]{line_range_start=16 line_range_end=19 path=src/components/planning/ShiftManager.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/components/planning/ShiftManager.jsx#L16-L19"}​​:codex-file-citation[codex-file-citation]{line_range_start=14 line_range_end=17 path=src/components/WorkReport.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/components/WorkReport.jsx#L14-L17"}​​:codex-file-citation[codex-file-citation]{line_range_start=104 line_range_end=108 path=src/components/planning/WorkReport.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/components/planning/WorkReport.jsx#L104-L108"}​​:codex-file-citation[codex-file-citation]{line_range_start=12 line_range_end=20 path=src/components/common/NotificationBell.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/components/common/NotificationBell.jsx#L12-L20"}​
+Bu repo, Firebase tabanlı **istemci tarafı kimlik doğrulama** ve **UI seviyesinde yetki kontrolü** içeriyor. İnceleme sonucunda bu depoda bağımsız bir backend enforcement katmanı veya Firestore security rules dosyası bulunamadı.
 
-- **`firestore.rules` status**
-  - Not found in this repo.
+### Frontend'de yapılan auth kontrolleri
 
-- **`firebase.json` status**
-  - Not found in this repo.
+1. **Login akışı Firebase Auth ile başlıyor.**
+   - `Login` bileşeni, form submit edildiğinde `AuthContext` içindeki ortak `login` fonksiyonunu çağırıyor.
 
-- **Backend auth enforcement**
-  - Not found in this repo.
-  - I only found client-side Firebase usage under `src/firebase/` and React auth/state checks under `src/context/` and `src/components/`.​:codex-file-citation[codex-file-citation]{line_range_start=1 line_range_end=45 path=src/firebase/firebaseConfig.js git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/firebase/firebaseConfig.js#L1-L45"}​​:codex-file-citation[codex-file-citation]{line_range_start=1 line_range_end=87 path=src/context/AuthContext.jsx git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/context/AuthContext.jsx#L1-L87"}​
-  - One client-side comment explicitly says deleting users from Firebase Auth would require the Admin SDK, which is not present here. (`src/firebase/teamService.js`)​:codex-file-citation[codex-file-citation]{line_range_start=89 line_range_end=99 path=src/firebase/teamService.js git_url="https://github.com/sharifarifi/EcomPilot4/blob/main/src/firebase/teamService.js#L89-L99"}​
+2. **Login sonrası `team_members/{uid}` kaydı zorunlu tutuluyor.**
+   - `login`, önce `signInWithEmailAndPassword` ile giriş yapıyor.
+   - Sonrasında Firestore'da `team_members/{uid}` dokümanını arıyor.
+   - Doküman yoksa kullanıcıyı anında `signOut` ediyor ve erişim hatası fırlatıyor.
+
+3. **Oturum değişiminde kullanıcı profili tekrar doğrulanıyor.**
+   - `onAuthStateChanged` içinde aynı `team_members/{uid}` kaydı tekrar okunuyor.
+   - Doküman varsa `userData` state'ine yükleniyor.
+   - Doküman yoksa oturum kapatılıyor.
+
+4. **Uygulama kabuğu yalnızca `currentUser` varsa render ediliyor.**
+   - `AuthGuard`, yükleme bitene kadar bekliyor.
+   - `currentUser` varsa ana uygulamayı, yoksa login ekranını gösteriyor.
+
+### Frontend'de yapılan authorization kontrolleri
+
+#### 1) Genel modül yetkisi: `hasPerm(permId)`
+
+`App.jsx` içinde merkezi bir `hasPerm` fonksiyonu var:
+
+- `Admin`, `Manager`, `CEO`, `Director` rollerine **tam yetki** veriliyor.
+- Diğer kullanıcılar için `userData.permissions` dizisi içindeki modül anahtarları kontrol ediliyor.
+- Bu kontrol şu ekranların render edilmesinde kullanılıyor:
+  - Dashboard
+  - Senaryo Planlayıcı
+  - İş Emirleri
+  - Manuel Siparişler
+  - Günlük Raporlar
+  - Giriş/Çıkış
+  - İzin Sistemi
+  - Raporlar
+  - Ayarlar
+
+Bu seviyedeki kontrol esas olarak **UI erişimi / görünürlük kontrolü** sağlıyor.
+
+#### 2) Rol bazlı ekran içi yetkiler
+
+Aşağıdaki bileşenlerde ayrıca `userData?.role` üzerinden rol bazlı kontroller uygulanıyor:
+
+- **TaskBoard**
+  - `Admin`, `Manager`, `CEO`, `Director` dışındaki kullanıcılar yalnızca kendilerine atanmış görevleri görebiliyor.
+  - Yeni görev açma ve görev silme işlemleri manager rolleri ile sınırlı.
+  - Görev durumunu ilerletme işlemi manager'a veya görev sahibine açık.
+
+- **LeaveManager**
+  - `isManager` olmayan kullanıcılar pratikte kendi izin akışlarına odaklı çalışıyor.
+  - Onay / red gibi yönetici aksiyonları manager rolleri için tasarlanmış.
+
+- **ShiftManager**
+  - `isManager` olmayan kullanıcılar yalnızca kendi vardiya kayıtlarını görebiliyor.
+  - Yönetici tarafında manuel kayıt / geniş görünüm mantığı mevcut.
+
+- **WorkReport**
+  - `isManager` olmayan kullanıcılar yalnızca kendi raporlarını görebiliyor.
+  - Düzenleme kuralı ayrıca daraltılmış: yönetici değilse yalnızca 24 saat içinde kendi raporunu düzenleyebiliyor.
+
+- **Komisyon ekranları**
+  - `RetailCommission`: `Admin`, `Manager`, `Director`, `CEO`
+  - `SocialMediaCommission`: `Admin`, `Manager`, `Director`, `CEO`
+  - `OperationCommission`: `Admin`, `Manager`, `Director`, `CEO`, `Operations Manager`
+  - Bu ekranlarda yetkili kullanıcılar ekip geneli detaylarını görebilirken, yetkisiz kullanıcılar çoğunlukla sadece kendi verisini görebilecek / kaydedebilecek şekilde kurgulanmış.
+
+#### 3) Kullanıcıya özel veri sınırları
+
+Bazı ekranlarda doğrudan `currentUser.uid` / `userData.uid` ile kayıtlar daraltılıyor:
+
+- görev listelerinde `task.assignee === userData?.uid`
+- vardiya kayıtlarında `shift.userId === userData?.uid`
+- günlük raporlarda `report.userId === userData?.uid`
+- komisyon ekranlarında kullanıcının kendi aylık verisi `currentUser.uid` ile çekiliyor
+- bildirimler kullanıcı UID'sine göre subscribe ediliyor
+
+Bu kontroller de istemci tarafında uygulanıyor.
+
+## Firestore security rules / backend enforcement durumu
+
+### Repo içinde bulunanlar
+
+- Firebase Web SDK kurulumu var.
+- Firestore/Auth/Storage istemci başlatımı var.
+- `src/firebase/` altında istemci tarafı veri erişim servisleri var.
+
+### Repo içinde bulunmayanlar
+
+İnceleme sırasında aşağıdakiler bu repo içinde bulunmadı:
+
+- `firestore.rules`
+- `firebase.json`
+- `.firebaserc`
+- Cloud Functions / ayrı backend auth enforcement katmanı
+- Firebase Admin SDK kullanan bir servis
+
+### Sonuç
+
+Bu bulgulara göre:
+
+- **Firestore security rules büyük olasılıkla bu repo dışında yönetiliyor** ya da henüz versiyonlanmamış.
+- **Backend enforcement bu repo içinde görünmüyor.**
+- Bu repo içindeki authorization kontrolleri ağırlıklı olarak **frontend / UI seviyesinde** uygulanıyor.
+
+### Ek not
+
+`teamService.js` içinde kullanıcıyı Firebase Auth'tan silmek için Admin SDK gerektiğini söyleyen açık bir yorum var. Bu da yönetimsel / sunucu tarafı enforcement mantığının bu repo içinde yer almadığını destekliyor.
