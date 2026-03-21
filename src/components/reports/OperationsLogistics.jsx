@@ -48,6 +48,49 @@ const OperationsTooltip = ({ active, payload, label }) => {
   );
 };
 
+
+const getStableHash = (input) => {
+  return Array.from(input).reduce((hash, char) => ((hash * 31) + char.charCodeAt(0)) % 1000003, 7);
+};
+
+const getStableNumber = (key, min, max, precision = 1) => {
+  const hash = getStableHash(key);
+  const normalized = (hash % 10000) / 10000;
+  const value = min + normalized * (max - min);
+  return Number(value.toFixed(precision));
+};
+
+const getStableInteger = (key, min, max) => {
+  const hash = getStableHash(key);
+  return min + (hash % (max - min + 1));
+};
+
+
+const OperationsTooltip = ({ active, payload, label }) => {
+  if (!active || !payload || !payload.length) return null;
+
+  return (
+    <div className="bg-slate-900/95 backdrop-blur-sm text-white p-4 rounded-xl shadow-2xl border border-slate-700 text-sm z-50 min-w-[160px]">
+      <p className="font-bold mb-3 border-b border-slate-700 pb-2 text-slate-300">{label}</p>
+      {payload.map((entry, index) => (
+        <div key={index} className="flex items-center justify-between gap-6 py-1">
+          <span className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]" style={{ backgroundColor: entry.color }}></div>
+            <span className="text-slate-200 font-medium">{entry.name}:</span>
+          </span>
+          <span className="font-black text-white">
+            {entry.name.includes('Oran') || entry.name.includes('Rate')
+              ? `%${entry.value}`
+              : entry.name.includes('Maliyet')
+                ? `₺${entry.value.toLocaleString()}`
+                : entry.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const OperationsLogistics = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
