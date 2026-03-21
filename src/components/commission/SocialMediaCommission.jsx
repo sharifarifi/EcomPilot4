@@ -335,6 +335,11 @@ const SocialMediaCommission = () => {
             ...person,
             ...metrics,
             rawTotal: metrics.baseCommissionAmount + metrics.bonusCommissionAmount // Lider bonusu hariç
+
+        return {
+            ...person,
+            ...metrics,
+            rawTotal: metrics.baseCommissionAmount + metrics.bonusCommissionAmount // Lider bonusu hariç
     const calculatedList = mergedStaffData.map(p => {
         const metrics = calculateCommissionMetrics({
             webSales: p.webSales || 0,
