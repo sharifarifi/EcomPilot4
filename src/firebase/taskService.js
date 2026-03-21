@@ -83,4 +83,9 @@ export const addTaskComment = async (taskId, comment) => {
 // --- SİL ---
 export const deleteTask = async (taskId) => {
   await deleteDoc(doc(db, TASKS_COLLECTION, taskId));
+  try {
+    await deleteDoc(doc(db, TASKS_COLLECTION, taskId));
+  } catch (error) {
+    throw error;
+  }
 };

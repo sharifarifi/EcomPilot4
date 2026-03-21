@@ -49,4 +49,9 @@ export const updateOrderStatus = async (orderId, newStatus) => {
 // --- SİL ---
 export const deleteOrder = async (orderId) => {
   await deleteDoc(doc(db, ORDERS_COLLECTION, orderId));
+  try {
+    await deleteDoc(doc(db, ORDERS_COLLECTION, orderId));
+  } catch (error) {
+    throw error;
+  }
 };

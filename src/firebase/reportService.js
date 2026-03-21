@@ -47,4 +47,9 @@ export const updateReport = async (reportId, updatedData) => {
 // --- SİL ---
 export const deleteReport = async (reportId) => {
   await deleteDoc(doc(db, REPORTS_COLLECTION, reportId));
+  try {
+    await deleteDoc(doc(db, REPORTS_COLLECTION, reportId));
+  } catch (error) {
+    throw error;
+  }
 };
