@@ -40,16 +40,13 @@ export const addReport = async (reportData) => {
 
 // --- RAPOR GÜNCELLE ---
 export const updateReport = async (reportId, updatedData) => {
-  try {
-    const reportRef = doc(db, REPORTS_COLLECTION, reportId);
-    await updateDoc(reportRef, updatedData);
-  } catch (error) {
-    throw error;
-  }
+  const reportRef = doc(db, REPORTS_COLLECTION, reportId);
+  await updateDoc(reportRef, updatedData);
 };
 
 // --- SİL ---
 export const deleteReport = async (reportId) => {
+  await deleteDoc(doc(db, REPORTS_COLLECTION, reportId));
   try {
     await deleteDoc(doc(db, REPORTS_COLLECTION, reportId));
   } catch (error) {

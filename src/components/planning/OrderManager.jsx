@@ -6,7 +6,7 @@ import {
 
 // --- FIREBASE IMPORTLARI ---
 import { useAuth } from '../../context/AuthContext';
-import { subscribeToOrders, addOrder, updateOrder, deleteOrder, updateOrderStatus } from '../../firebase/orderService';
+import { subscribeToOrders, addOrder, updateOrder, updateOrderStatus } from '../../firebase/orderService';
 
 // Şehir Verisi (Dosya yolu sizde farklı olabilir, kontrol edin!)
 import { cities } from '../../data/cities'; 
@@ -158,7 +158,7 @@ const OrderManager = () => {
   const handleUpdateStatus = async (id, newStatus) => {
     try {
         await updateOrderStatus(id, newStatus);
-    } catch (error) {
+    } catch {
         alert("Durum güncellenemedi.");
     }
   };

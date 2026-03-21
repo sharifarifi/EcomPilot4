@@ -74,18 +74,15 @@ export const updateTaskStatus = async (taskId, newStatus, userName) => {
 
 // --- YORUM EKLE ---
 export const addTaskComment = async (taskId, comment) => {
-  try {
-    const taskRef = doc(db, TASKS_COLLECTION, taskId);
-    await updateDoc(taskRef, {
-      comments: arrayUnion(comment)
-    });
-  } catch (error) {
-    throw error;
-  }
+  const taskRef = doc(db, TASKS_COLLECTION, taskId);
+  await updateDoc(taskRef, {
+    comments: arrayUnion(comment)
+  });
 };
 
 // --- SİL ---
 export const deleteTask = async (taskId) => {
+  await deleteDoc(doc(db, TASKS_COLLECTION, taskId));
   try {
     await deleteDoc(doc(db, TASKS_COLLECTION, taskId));
   } catch (error) {

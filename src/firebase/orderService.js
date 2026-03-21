@@ -42,16 +42,13 @@ export const updateOrder = async (orderId, updatedData) => {
 
 // --- DURUM GÜNCELLE ---
 export const updateOrderStatus = async (orderId, newStatus) => {
-  try {
-    const orderRef = doc(db, ORDERS_COLLECTION, orderId);
-    await updateDoc(orderRef, { status: newStatus });
-  } catch (error) {
-    throw error;
-  }
+  const orderRef = doc(db, ORDERS_COLLECTION, orderId);
+  await updateDoc(orderRef, { status: newStatus });
 };
 
 // --- SİL ---
 export const deleteOrder = async (orderId) => {
+  await deleteDoc(doc(db, ORDERS_COLLECTION, orderId));
   try {
     await deleteDoc(doc(db, ORDERS_COLLECTION, orderId));
   } catch (error) {

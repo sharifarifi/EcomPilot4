@@ -38,7 +38,7 @@ const CommissionRetail = () => {
 
   // GİRDİLER (Kişisel)
   const [personalSales, setPersonalSales] = useState(0); 
-  const [personalTarget, setPersonalTarget] = useState(0); 
+  const [, setPersonalTarget] = useState(0); 
 
   // VERİLER (Tüm Ekip)
   const [allStaffData, setAllStaffData] = useState([]);

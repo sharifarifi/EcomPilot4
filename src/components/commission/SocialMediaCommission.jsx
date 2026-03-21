@@ -103,7 +103,6 @@ const SocialMediaCommission = () => {
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [achievementRate, setAchievementRate] = useState(0);
   const [baseRate, setBaseRate] = useState(0); 
-  const [manualRatio, setManualRatio] = useState(0); 
   const [bonusRate, setBonusRate] = useState(0); 
   
   // Tutarlar (Kişisel)
@@ -217,8 +216,6 @@ const SocialMediaCommission = () => {
 
     // C. Manuel Bonus Oranı
     const mRatio = total > 0 ? (Number(manualSales) / total) * 100 : 0;
-    setManualRatio(mRatio);
-
     let bnsRate = 0;
     if(rules.manualBonuses) {
         const matchedBonus = rules.manualBonuses.find(b => mRatio >= b.minRatio && mRatio <= b.maxRatio);

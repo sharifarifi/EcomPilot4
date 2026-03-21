@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login';
-import { LogOut, Loader, AlertCircle, ShieldAlert } from 'lucide-react'; 
+import { LogOut, Loader, ShieldAlert } from 'lucide-react'; 
 
 // İkonlar
 import { 
@@ -309,7 +309,7 @@ const AccessDeniedMessage = ({ title, message }) => (
     <div className="bg-red-50 p-6 rounded-full mb-6">
         <ShieldAlert size={64} className="text-red-500" />
     </div>
-    <h2 className="text-2xl font-bold text-slate-800 mb-2">Erişim Engellendi</h2>
+    <h2 className="text-2xl font-bold text-slate-800 mb-2">{title}</h2>
     <p className="text-slate-500 max-w-md mb-6">{message}</p>
     <div className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium">
         Erişim izni için yöneticinizle görüşün.

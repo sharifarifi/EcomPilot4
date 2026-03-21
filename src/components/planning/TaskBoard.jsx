@@ -19,7 +19,7 @@ const TaskBoard = () => {
   const [filterType, setFilterType] = useState('all'); 
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null); 
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   const [newTask, setNewTask] = useState({ 
     title: '', detail: '', priority: 'Orta', 
