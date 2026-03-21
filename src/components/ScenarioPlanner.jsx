@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { RefreshCw, Save, Upload, Download, Calendar, FileSpreadsheet } from 'lucide-react';
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
@@ -17,8 +17,6 @@ const ScenarioPlanner = () => {
     fixedCost: 20000
   });
 
-  const [results, setResults] = useState([]);
-  const [summary, setSummary] = useState({ revenue: 0, profit: 0, margin: 0 });
 
   // 2. EXCEL İŞLEMLERİ
   
@@ -58,7 +56,7 @@ const ScenarioPlanner = () => {
       // Excel verisini state'e dönüştür
       const newInputs = { ...inputs };
       data.forEach(row => {
-        if(newInputs.hasOwnProperty(row.Parametre)) {
+        if (Object.prototype.hasOwnProperty.call(newInputs, row.Parametre)) {
            newInputs[row.Parametre] = parseFloat(row.Değer);
         }
       });
@@ -69,29 +67,28 @@ const ScenarioPlanner = () => {
   };
 
   // 3. HESAPLAMA MOTORU (Tarih Seçimine Göre Dinamik)
-  useEffect(() => {
+  const { results, summary } = useMemo(() => {
     const [year, month] = scenarioDate.split('-').map(Number);
     let currentData = new Date(year, month - 1, 1); // JS'de aylar 0'dan başlar
 
     let totalRev = 0;
     let totalProf = 0;
 
-    const newResults = Array.from({ length: 6 }).map((_, index) => {
-      // Ay İsimlerini Oluştur
+    const calculatedResults = Array.from({ length: 6 }).map((_, index) => {
       const monthName = currentData.toLocaleDateString('tr-TR', { month: 'long', year: '2-digit' });
-      currentData.setMonth(currentData.getMonth() + 1); // Bir sonraki aya geç
+      currentData.setMonth(currentData.getMonth() + 1);
 
-      const growthFactor = 1 + (index * 0.10); 
+      const growthFactor = 1 + (index * 0.10);
       const monthlyBudget = inputs.marketingBudget * growthFactor;
       const traffic = monthlyBudget / inputs.cpc;
-      let orders = traffic * (inputs.conversionRate / 100);
+      const orders = traffic * (inputs.conversionRate / 100);
       const netOrders = orders * (1 - inputs.returnRate / 100);
       const revenue = netOrders * inputs.aov;
-      const cogs = revenue * (inputs.cogsRate / 100); 
-      const shippingCost = orders * inputs.shippingAvg; 
+      const cogs = revenue * (inputs.cogsRate / 100);
+      const shippingCost = orders * inputs.shippingAvg;
       const totalVariableCost = cogs + shippingCost + monthlyBudget;
       const profit = revenue - totalVariableCost - inputs.fixedCost;
-      const margin = (revenue > 0) ? (profit / revenue) * 100 : 0;
+      const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
       totalRev += revenue;
       totalProf += profit;
@@ -108,14 +105,15 @@ const ScenarioPlanner = () => {
       };
     });
 
-    setResults(newResults);
-    setSummary({
-      revenue: totalRev,
-      profit: totalProf,
-      margin: totalRev > 0 ? (totalProf / totalRev) * 100 : 0
-    });
-
-  }, [inputs, scenarioDate]); // Tarih veya Input değişince çalışır
+    return {
+      results: calculatedResults,
+      summary: {
+        revenue: totalRev,
+        profit: totalProf,
+        margin: totalRev > 0 ? (totalProf / totalRev) * 100 : 0
+      }
+    };
+  }, [inputs, scenarioDate]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;

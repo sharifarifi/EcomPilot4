@@ -12,31 +12,41 @@ import {
 
 // --- FIREBASE SERVİSİ ---
 import { subscribeToTasks } from '../../firebase/taskService';
+import {
+  BASE_CARGO,
+  BASE_RETURNS,
+  BASE_TOP_RETURNS,
+  BASE_REGIONAL,
+  RETURN_CATEGORIES,
+  getStableNumber,
+  getStableInteger,
+} from '../../demo-data/operationsLogistics';
 
-// --- DEMO / YEDEK VERİLER ---
-const BASE_CARGO = [
-  { name: 'Yurtiçi', avgDays: 1.8, damageRate: 1.2 }, { name: 'Aras', avgDays: 2.4, damageRate: 2.1 },
-  { name: 'MNG', avgDays: 2.1, damageRate: 1.8 }, { name: 'PTT', avgDays: 4.5, damageRate: 0.8 }, { name: 'Kolay Gelsin', avgDays: 0.9, damageRate: 0.2 }, 
-];
-const BASE_RETURNS = [
-  { name: 'Beden Uymadı', value: 42, color: '#3B82F6' }, { name: 'Kusurlu/Hasarlı', value: 28, color: '#EF4444' },
-  { name: 'Görselden Farklı', value: 15, color: '#F59E0B' }, { name: 'Geç Teslimat', value: 10, color: '#8B5CF6' }, { name: 'Diğer', value: 5, color: '#94A3B8' },
-];
-const BASE_TOP_RETURNS = [
-  { sku: 'TSH-001-BLK', name: 'Siyah Basic Tişört', category: 'Giyim', returnRate: 14.5, totalReturned: 145, lostRevenue: 43500, mainReason: 'Beden Uymadı', trend: 'up' },
-  { sku: 'SHS-042-WHT', name: 'Beyaz Sneaker', category: 'Ayakkabı', returnRate: 18.2, totalReturned: 82, lostRevenue: 65600, mainReason: 'Kusurlu/Hasarlı', trend: 'down' },
-  { sku: 'DRS-018-RED', name: 'Kırmızı Elbise', category: 'Giyim', returnRate: 15.1, totalReturned: 64, lostRevenue: 38400, mainReason: 'Görselden Farklı', trend: 'up' },
-  { sku: 'JCK-009-BLU', name: 'Mavi Kot Ceket', category: 'Dış Giyim', returnRate: 8.4, totalReturned: 41, lostRevenue: 24600, mainReason: 'Beden Uymadı', trend: 'down' },
-  { sku: 'ACC-055-GLD', name: 'Zincir Kolye', category: 'Aksesuar', returnRate: 22.5, totalReturned: 38, lostRevenue: 11400, mainReason: 'Kusurlu/Hasarlı', trend: 'up' },
-];
-const BASE_REGIONAL = [
-  { city: 'İstanbul', orders: 4500, avgDays: 1.1 }, { city: 'Ankara', orders: 2800, avgDays: 1.4 },
-  { city: 'İzmir', orders: 2100, avgDays: 1.5 }, { city: 'Bursa', orders: 1800, avgDays: 1.8 },
-  { city: 'Antalya', orders: 1500, avgDays: 1.9 }, { city: 'Diyarbakır', orders: 600, avgDays: 3.2 },
-];
-const RETURN_CATEGORIES = [
-  { name: 'Giyim', value: 45 }, { name: 'Ayakkabı', value: 25 }, { name: 'Aksesuar', value: 15 }, { name: 'Kozmetik', value: 10 }, { name: 'Ev/Yaşam', value: 5 }
-];
+
+const OperationsTooltip = ({ active, payload, label }) => {
+  if (!active || !payload || !payload.length) return null;
+
+  return (
+    <div className="bg-slate-900/95 backdrop-blur-sm text-white p-4 rounded-xl shadow-2xl border border-slate-700 text-sm z-50 min-w-[160px]">
+      <p className="font-bold mb-3 border-b border-slate-700 pb-2 text-slate-300">{label}</p>
+      {payload.map((entry, index) => (
+        <div key={index} className="flex items-center justify-between gap-6 py-1">
+          <span className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]" style={{ backgroundColor: entry.color }}></div>
+            <span className="text-slate-200 font-medium">{entry.name}:</span>
+          </span>
+          <span className="font-black text-white">
+            {entry.name.includes('Oran') || entry.name.includes('Rate')
+              ? `%${entry.value}`
+              : entry.name.includes('Maliyet')
+                ? `₺${entry.value.toLocaleString()}`
+                : entry.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const OperationsLogistics = () => {
   const [tasks, setTasks] = useState([]);
@@ -126,15 +136,19 @@ const OperationsLogistics = () => {
         
         return {
             date: new Date(dateStr).toLocaleDateString('tr-TR', {day: 'numeric', month: 'short'}),
-            shopify: isReal ? parseFloat((baseSpeed + speedPenalty + Math.random()*2).toFixed(1)) : parseFloat((Math.random()*10 + 10).toFixed(1)),
-            trendyol: isReal ? parseFloat((baseSpeed + speedPenalty + 4 + Math.random()*3).toFixed(1)) : parseFloat((Math.random()*15 + 15).toFixed(1)),
-            totalOrders: isReal ? dayCompleted : Math.floor(Math.random()*100 + 50)
+            shopify: isReal
+              ? Number((baseSpeed + speedPenalty + getStableNumber(`${dateStr}-shopify`, 0, 2, 1)).toFixed(1))
+              : getStableNumber(`${dateStr}-shopify-fallback`, 10, 20, 1),
+            trendyol: isReal
+              ? Number((baseSpeed + speedPenalty + 4 + getStableNumber(`${dateStr}-trendyol`, 0, 3, 1)).toFixed(1))
+              : getStableNumber(`${dateStr}-trendyol-fallback`, 15, 30, 1),
+            totalOrders: isReal ? dayCompleted : getStableInteger(`${dateStr}-orders`, 50, 149)
         }
     });
 
     const generatedCostData = dates.map((dateStr, i) => {
         const orders = realFulfillmentData[i].totalOrders;
-        const unitCost = parseFloat((45 + (Math.random() * 5)).toFixed(2));
+        const unitCost = getStableNumber(`${dateStr}-unit-cost`, 45, 50, 2);
         return {
             date: new Date(dateStr).toLocaleDateString('tr-TR', {day: 'numeric', month: 'short'}),
             unitCost: unitCost,
@@ -191,29 +205,6 @@ const OperationsLogistics = () => {
     document.body.removeChild(link);
   };
 
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-slate-900/95 backdrop-blur-sm text-white p-4 rounded-xl shadow-2xl border border-slate-700 text-sm z-50 min-w-[160px]">
-          <p className="font-bold mb-3 border-b border-slate-700 pb-2 text-slate-300">{label}</p>
-          {payload.map((entry, index) => (
-            <div key={index} className="flex items-center justify-between gap-6 py-1">
-               <span className="flex items-center gap-2">
-                 <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]" style={{ backgroundColor: entry.color }}></div>
-                 <span className="text-slate-200 font-medium">{entry.name}:</span>
-               </span>
-               <span className="font-black text-white">
-                   {entry.name.includes('Oran') || entry.name.includes('Rate') ? `%${entry.value}` : 
-                    entry.name.includes('Maliyet') ? `₺${entry.value.toLocaleString()}` :
-                    entry.value}
-               </span>
-            </div>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
 
   if (loading) return <div className="flex h-screen items-center justify-center text-slate-400"><Loader2 className="animate-spin mr-2" size={32}/> Operasyon Komuta Merkezi Yükleniyor...</div>;
 
@@ -377,7 +368,7 @@ const OperationsLogistics = () => {
                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#64748b', fontWeight: 500}} dy={10} />
                      <YAxis axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#64748b'}} />
-                     <Tooltip cursor={{fill: '#f8fafc'}} content={<CustomTooltip />} />
+                     <Tooltip cursor={{fill: '#f8fafc'}} content={<OperationsTooltip />} />
                      <ReferenceLine y={24} stroke="#EF4444" strokeDasharray="5 5" strokeWidth={2} label={{ position: 'top', value: 'SLA Max (24s)', fill: '#EF4444', fontSize: 10, fontWeight: 'bold' }} />
                      <Bar dataKey="shopify" name="Kendi Sitemiz" fill="url(#colorShopify)" radius={[4, 4, 0, 0]} barSize={16} />
                      <Bar dataKey="trendyol" name="Pazaryeri" fill="url(#colorTrendyol)" radius={[4, 4, 0, 0]} barSize={16} />
@@ -398,7 +389,7 @@ const OperationsLogistics = () => {
                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
                      <XAxis type="number" hide />
                      <YAxis dataKey="stage" type="category" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#475569', fontWeight: 'bold'}} width={110} />
-                     <Tooltip cursor={{fill: '#f8fafc'}} content={<CustomTooltip />} />
+                     <Tooltip cursor={{fill: '#f8fafc'}} content={<OperationsTooltip />} />
                      <Bar dataKey="waitTime" name="Yığılma / Bekleme (Birim)" radius={[0, 4, 4, 0]} barSize={24}>
                         {bottleneckData.map((entry, index) => (
                            <Cell key={`cell-${index}`} fill={entry.waitTime > entry.limit ? '#EF4444' : entry.waitTime > (entry.limit * 0.6) ? '#F59E0B' : '#3B82F6'} />
@@ -425,7 +416,7 @@ const OperationsLogistics = () => {
                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#64748b', fontWeight: 500}} dy={10} />
                      <YAxis axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#64748b'}} tickFormatter={(val) => `₺${val}`} />
-                     <Tooltip content={<CustomTooltip />} />
+                     <Tooltip content={<OperationsTooltip />} />
                      <Area type="monotone" dataKey="unitCost" name="Ort. Kargo Maliyeti" stroke="#A855F7" strokeWidth={3} fillOpacity={1} fill="url(#colorCost)" activeDot={{ r: 6, strokeWidth: 0, fill: '#7E22CE' }} />
                   </AreaChart>
                </ResponsiveContainer>
@@ -448,7 +439,7 @@ const OperationsLogistics = () => {
                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#475569', fontWeight: 'bold'}} dy={10} />
                      <YAxis yAxisId="left" orientation="left" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#3B82F6', fontWeight: 'bold'}} />
                      <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{fontSize: 11, fill: '#EF4444', fontWeight: 'bold'}} tickFormatter={(value) => `%${value}`} />
-                     <Tooltip content={<CustomTooltip />} />
+                     <Tooltip content={<OperationsTooltip />} />
                      <Bar yAxisId="left" dataKey="avgDays" name="Ort. Teslimat (Gün)" fill="url(#colorDays)" radius={[6, 6, 0, 0]} barSize={32} />
                      <Line yAxisId="right" type="monotone" dataKey="damageRate" name="Hasar Oranı" stroke="#EF4444" strokeWidth={4} dot={{ r: 5, fill: '#EF4444', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 8, fill: '#DC2626' }} />
                   </ComposedChart>
@@ -472,7 +463,7 @@ const OperationsLogistics = () => {
                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
                      <XAxis type="number" hide />
                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fontSize: 12, fill: '#64748b', fontWeight: 600}} width={80} />
-                     <Tooltip cursor={{fill: '#f8fafc'}} content={<CustomTooltip />} />
+                     <Tooltip cursor={{fill: '#f8fafc'}} content={<OperationsTooltip />} />
                      <Bar dataKey="value" name="İade Oranı" fill="#10B981" radius={[0, 4, 4, 0]} barSize={20}>
                         {RETURN_CATEGORIES.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.value > 20 ? '#F59E0B' : entry.value > 40 ? '#EF4444' : '#10B981'} />)}
                      </Bar>
