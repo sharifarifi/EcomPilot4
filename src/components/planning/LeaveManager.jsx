@@ -11,7 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { subscribeToLeaves, addLeaveRequest, updateLeaveStatus, updateLeave, deleteLeaveRequest } from '../../firebase/leaveService';
 import { getAllTeamMembers } from '../../firebase/teamService';
 import { collection, getDocs } from 'firebase/firestore'; 
-import { db } from '../../firebase/firebaseconfig';
+import { db } from '../../firebase/firebaseConfig';
 
 const LeaveManager = () => {
   const { userData } = useAuth();

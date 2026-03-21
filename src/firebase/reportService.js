@@ -1,4 +1,4 @@
-import { db } from "./firebaseconfig";
+import { db } from "./firebaseConfig";
 import { 
   collection, addDoc, updateDoc, deleteDoc, doc, 
   onSnapshot, query, orderBy, serverTimestamp 
@@ -40,19 +40,11 @@ export const addReport = async (reportData) => {
 
 // --- RAPOR GÜNCELLE ---
 export const updateReport = async (reportId, updatedData) => {
-  try {
-    const reportRef = doc(db, REPORTS_COLLECTION, reportId);
-    await updateDoc(reportRef, updatedData);
-  } catch (error) {
-    throw error;
-  }
+  const reportRef = doc(db, REPORTS_COLLECTION, reportId);
+  await updateDoc(reportRef, updatedData);
 };
 
 // --- SİL ---
 export const deleteReport = async (reportId) => {
-  try {
-    await deleteDoc(doc(db, REPORTS_COLLECTION, reportId));
-  } catch (error) {
-    throw error;
-  }
+  await deleteDoc(doc(db, REPORTS_COLLECTION, reportId));
 };

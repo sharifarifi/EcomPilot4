@@ -1,4 +1,4 @@
-import { db } from "./firebaseconfig";
+import { db } from "./firebaseConfig";
 import { 
   collection, addDoc, updateDoc, deleteDoc, doc, 
   onSnapshot, query, orderBy, serverTimestamp 
@@ -42,19 +42,11 @@ export const updateOrder = async (orderId, updatedData) => {
 
 // --- DURUM GÜNCELLE ---
 export const updateOrderStatus = async (orderId, newStatus) => {
-  try {
-    const orderRef = doc(db, ORDERS_COLLECTION, orderId);
-    await updateDoc(orderRef, { status: newStatus });
-  } catch (error) {
-    throw error;
-  }
+  const orderRef = doc(db, ORDERS_COLLECTION, orderId);
+  await updateDoc(orderRef, { status: newStatus });
 };
 
 // --- SİL ---
 export const deleteOrder = async (orderId) => {
-  try {
-    await deleteDoc(doc(db, ORDERS_COLLECTION, orderId));
-  } catch (error) {
-    throw error;
-  }
+  await deleteDoc(doc(db, ORDERS_COLLECTION, orderId));
 };

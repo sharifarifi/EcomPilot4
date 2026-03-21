@@ -26,4 +26,17 @@ export default defineConfig([
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
     },
   },
+  {
+    files: [
+      'src/context/AuthContext.jsx',
+      'src/components/settings/integrations/AccountingApps.jsx',
+      'src/components/settings/integrations/EcommerceApps.jsx',
+      'src/components/settings/integrations/LogisticsApps.jsx',
+      'src/components/settings/integrations/MarketplaceApps.jsx',
+      'src/components/settings/integrations/PaymentApps.jsx',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

@@ -61,7 +61,7 @@ const Dashboard = ({ startDate, endDate, compareMode }) => {
       if (!d) return '';
       try {
           return d.split('-').reverse().join('.');
-      } catch (e) {
+      } catch {
           return d; // Hata olursa orijinal stringi dön
       }
   };

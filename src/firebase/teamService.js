@@ -1,5 +1,5 @@
 // DOSYA ADI: src/firebase/teamService.js
-import { db, firebaseConfig } from "./firebaseconfig"; 
+import { db, firebaseConfig } from "./firebaseConfig"; 
 import { doc, setDoc, updateDoc, deleteDoc, collection, getDocs, getDoc } from "firebase/firestore";
 import { initializeApp, deleteApp, getApps } from "firebase/app"; 
 import { getAuth, createUserWithEmailAndPassword, signOut, updateProfile } from "firebase/auth";
@@ -114,21 +114,17 @@ export const getDepartments = async () => {
       return docSnap.data().list || DEFAULT_DEPARTMENTS;
     }
     return DEFAULT_DEPARTMENTS;
-  } catch (error) {
+  } catch {
     return DEFAULT_DEPARTMENTS;
   }
 };
 
 export const saveDepartments = async (departmentList) => {
-  try {
-    const docRef = doc(db, "settings", "departments");
-    await setDoc(docRef, { list: departmentList }, { merge: true });
-  } catch (error) {
-    throw error;
-  }
+  const docRef = doc(db, "settings", "departments");
+  await setDoc(docRef, { list: departmentList }, { merge: true });
 };
 // ... Diğer importlar ...
-import { updatePassword, EmailAuthProvider, reauthenticateWithCredential } from "firebase/auth";
+import { updatePassword } from "firebase/auth";
 
 // ... Diğer fonksiyonlar ...
 

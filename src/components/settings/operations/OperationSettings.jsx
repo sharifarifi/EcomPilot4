@@ -53,7 +53,7 @@ const OperationSettings = () => {
     const unsubscribe = subscribeToOperationSettings((data) => {
       if (data) {
         // Gelen veriyi state'e yaz, eksik alan varsa varsayılanlarla tamamla
-        setOps(prev => ({ ...DEFAULT_OPS, ...data }));
+        setOps({ ...DEFAULT_OPS, ...data });
       }
       setDataLoading(false);
     });

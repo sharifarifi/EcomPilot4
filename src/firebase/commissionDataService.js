@@ -1,5 +1,5 @@
 import { db } from "./firebaseConfig";
-import { doc, getDoc, setDoc, onSnapshot, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, collection, getDocs } from "firebase/firestore";
 
 // Veritabanı Yolu: commissions / {YIL-AY} / staff_records / {USER_ID}
 
@@ -30,8 +30,7 @@ export const saveStaffMonthlyData = async (userId, monthKey, data) => {
 // O ayın tüm personel verilerini getir (Lider tablosu için)
 export const getMonthSummary = async (monthKey) => {
   try {
-    const q = query(collection(db, "commissions", monthKey, "staff_records"));
-    const querySnapshot = await getDocs(q);
+    const querySnapshot = await getDocs(collection(db, "commissions", monthKey, "staff_records"));
     const list = [];
     querySnapshot.forEach((doc) => {
       list.push({ id: doc.id, ...doc.data() });

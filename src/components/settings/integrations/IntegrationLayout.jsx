@@ -35,12 +35,9 @@ const IntegrationLayout = () => {
   const [modalTab, setModalTab] = useState('general'); 
   const [showApiKey, setShowApiKey] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [dbData, setDbData] = useState({}); // Veritabanından gelen gerçek veriler
-
   // --- VERİTABANI BAĞLANTISI ---
   useEffect(() => {
     const unsubscribe = subscribeToIntegrations((data) => {
-      setDbData(data);
       // Veritabanından gelen verileri, mevcut uygulama listesiyle birleştir
       setApps(prevApps => prevApps.map(app => {
         const savedData = data[app.id]; // Örn: data['trendyol']

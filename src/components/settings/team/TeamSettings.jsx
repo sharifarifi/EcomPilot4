@@ -173,7 +173,7 @@ const TeamManagement = () => {
         await addTeamMember(formData);
       } else {
         if (!formData.uid) throw new Error("ID bulunamadı.");
-        const { password, ...updateData } = formData; 
+        const { password: _password, ...updateData } = formData; 
         await updateTeamMember(formData.uid, updateData);
       }
       setIsUserModalOpen(false);

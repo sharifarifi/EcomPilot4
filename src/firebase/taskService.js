@@ -1,4 +1,4 @@
-import { db } from "./firebaseconfig";
+import { db } from "./firebaseConfig";
 import { sendNotification } from './notificationService'; // Bildirim servisi import edildi
 import { 
   collection, addDoc, updateDoc, deleteDoc, doc, 
@@ -74,21 +74,13 @@ export const updateTaskStatus = async (taskId, newStatus, userName) => {
 
 // --- YORUM EKLE ---
 export const addTaskComment = async (taskId, comment) => {
-  try {
-    const taskRef = doc(db, TASKS_COLLECTION, taskId);
-    await updateDoc(taskRef, {
-      comments: arrayUnion(comment)
-    });
-  } catch (error) {
-    throw error;
-  }
+  const taskRef = doc(db, TASKS_COLLECTION, taskId);
+  await updateDoc(taskRef, {
+    comments: arrayUnion(comment)
+  });
 };
 
 // --- SİL ---
 export const deleteTask = async (taskId) => {
-  try {
-    await deleteDoc(doc(db, TASKS_COLLECTION, taskId));
-  } catch (error) {
-    throw error;
-  }
+  await deleteDoc(doc(db, TASKS_COLLECTION, taskId));
 };
