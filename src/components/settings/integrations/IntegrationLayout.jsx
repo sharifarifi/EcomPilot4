@@ -101,6 +101,11 @@ const IntegrationLayout = () => {
     }));
   };
 
+  const getDemoPlaceholder = (app, key) => {
+    const demoValue = app?.demoTemplate?.fields?.[key];
+    return demoValue ? `Örnek değer: ${demoValue}` : `${key} giriniz...`;
+  };
+
   // 2. Gelişmiş Ayar Güncelleme (Local State)
   const handleAdvancedChange = (key, value) => {
     setSelectedApp(prev => ({
@@ -260,18 +265,27 @@ const IntegrationLayout = () => {
                        {/* 1. API GİRİŞ */}
                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                           <h4 className="text-sm font-bold text-slate-800 mb-5 flex items-center gap-2 pb-2 border-b border-slate-100"><Key size={16} className="text-blue-500"/> Kimlik Doğrulama</h4>
+                          {selectedApp.demoTemplate && (
+                            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                              <div className="font-bold uppercase tracking-wide">{selectedApp.demoTemplate.badge || 'Demo template data'}</div>
+                              <div className="mt-1">Bu alanlardaki placeholder değerler yalnızca örnek gösterim içindir; gerçek kullanıcı credential verisi değildir.</div>
+                            </div>
+                          )}
                           <div className="space-y-4">
                              {selectedApp.fields && Object.keys(selectedApp.fields).map((key) => (
                                 <div key={key}>
-                                   <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">{key.replace(/([A-Z])/g, ' $1').trim()}</label>
+                                   <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">
+                                     {key.replace(/([A-Z])/g, ' $1').trim()}
+                                     {selectedApp.demoTemplate?.fields?.[key] && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 normal-case">Örnek değer</span>}
+                                   </label>
                                    <div className="relative">
                                       <input 
                                         type={key.toLowerCase().includes('password') || key.toLowerCase().includes('secret') ? (showApiKey ? "text" : "password") : "text"} 
                                         className="w-full border border-slate-300 rounded-xl p-3 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-slate-700 bg-white" 
                                         value={selectedApp.fields[key]} 
                                         onChange={(e) => handleFieldChange(key, e.target.value)} 
-                                        placeholder={`${key} giriniz...`} 
-                                        disabled={selectedApp.status === 'connected'}
+                                        placeholder={getDemoPlaceholder(selectedApp, key)} 
+                                        disabled={selectedApp.status === 'connected' && !selectedApp.demoTemplate}
                                       />
                                       {(key.toLowerCase().includes('password') || key.toLowerCase().includes('secret')) && <button onClick={() => setShowApiKey(!showApiKey)} className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 transition">{showApiKey ? <EyeOff size={18}/> : <Eye size={18}/>}</button>}
                                    </div>
