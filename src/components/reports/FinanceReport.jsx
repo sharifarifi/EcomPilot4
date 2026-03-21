@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   Wallet, TrendingUp, TrendingDown, DollarSign, Calendar, 
   Download, ChevronDown, PieChart, ArrowUpRight, ArrowDownRight,
@@ -11,6 +12,10 @@ import { financeReportFinancialData, financeReportTransactions } from '../../dem
 
 // 1. Premium Finans Kartı
 const FinanceCard = ({ title, value, subValue, change, trend, icon, color, loading, target }) => (
+const FinanceCard = ({ title, value, subValue, change, trend, icon, color, loading, target }) => {
+  const Icon = icon;
+
+  return (
   <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all group relative overflow-hidden h-full flex flex-col justify-between">
     {loading ? (
       <div className="animate-pulse space-y-3">
@@ -36,6 +41,7 @@ const FinanceCard = ({ title, value, subValue, change, trend, icon, color, loadi
            <h3 className="text-3xl font-black text-slate-800 tracking-tight">{value}</h3>
            <p className="text-sm font-medium text-slate-500">{title}</p>
            <p className="text-xs text-slate-400 mt-1">{subValue}</p>
+           {subValue && <p className="text-xs font-semibold text-slate-400 mt-1">{subValue}</p>}
         </div>
 
         {/* Bütçe Hedef Barı */}
@@ -57,6 +63,7 @@ const FinanceCard = ({ title, value, subValue, change, trend, icon, color, loadi
     )}
   </div>
 );
+};
 
 // 2. Hibrit Grafik (Bar + Line - SVG)
 const CompositeChart = ({ data, loading }) => {
@@ -132,6 +139,24 @@ const FinanceReport = () => {
   const transactions = financeReportTransactions;
 
   const loading = false;
+  const transactions = [
+    { id: 'TX-9921', desc: 'Shopify Satış Geliri', cat: 'Satış', date: 'Bugün, 14:30', amount: 12450, type: 'in', status: 'Tamamlandı' },
+    { id: 'TX-9920', desc: 'Meta Ads Reklam', cat: 'Pazarlama', date: 'Bugün, 11:00', amount: -4200, type: 'out', status: 'Tamamlandı' },
+    { id: 'TX-9919', desc: 'Yurtiçi Kargo', cat: 'Lojistik', date: 'Dün, 16:45', amount: -1850, type: 'out', status: 'Bekliyor' },
+    { id: 'TX-9918', desc: 'Trendyol Hakediş', cat: 'Satış', date: 'Dün, 09:15', amount: 8900, type: 'in', status: 'Tamamlandı' },
+    { id: 'TX-9917', desc: 'AWS Sunucu', cat: 'Altyapı', date: '20 Mar', amount: -450, type: 'out', status: 'Tamamlandı' },
+  ];
+
+  const loading = false;
+
+  const loading = false;
+
+  const summaryCards = useMemo(() => ([
+    { title: 'Toplam Gelir', value: '₺845,230', subValue: '₺1.2M Hedef', change: '+%12', trend: 'up', icon: TrendingUp, color: 'emerald', target: 78 },
+    { title: 'Operasyonel Gider', value: '₺242,500', subValue: 'Limit: ₺300k', change: '+%5', trend: 'down', icon: TrendingDown, color: 'rose', target: 80 },
+    { title: 'Net Kâr (EBITDA)', value: '₺602,730', subValue: 'Marj: %71', change: '+%18', trend: 'up', icon: Wallet, color: 'blue', target: 92 },
+    { title: 'Kasa Nakdi', value: '₺128,400', subValue: 'Runway: 4 Ay', change: '-%2', trend: 'down', icon: Landmark, color: 'amber', target: 45 }
+  ]), []);
 
   const handleExport = () => {
     alert("Finansal Rapor (XLSX) hazırlanıyor...");
@@ -191,26 +216,9 @@ const FinanceReport = () => {
 
       {/* 2. KPI KARTLARI (Bütçe Hedefli) */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-         <FinanceCard 
-            title="Toplam Gelir" value="₺845,230" subValue="₺1.2M Hedef" 
-            change="+%12" trend="up" icon={TrendingUp} color="emerald" 
-            target={78} loading={loading}
-         />
-         <FinanceCard 
-            title="Operasyonel Gider" value="₺242,500" subValue="Limit: ₺300k"
-            change="+%5" trend="down" icon={TrendingDown} color="rose" 
-            target={80} loading={loading}
-         />
-         <FinanceCard 
-            title="Net Kâr (EBITDA)" value="₺602,730" subValue="Marj: %71"
-            change="+%18" trend="up" icon={Wallet} color="blue" 
-            target={92} loading={loading}
-         />
-         <FinanceCard 
-            title="Kasa Nakdi" value="₺128,400" subValue="Runway: 4 Ay"
-            change="-%2" trend="down" icon={Landmark} color="amber" 
-            target={45} loading={loading}
-         />
+         {summaryCards.map((card) => (
+           <FinanceCard key={card.title} {...card} loading={loading} />
+         ))}
       </div>
 
       {/* 3. ANA GRAFİK & DETAYLAR */}
