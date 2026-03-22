@@ -112,8 +112,10 @@ VITE_FIREBASE_APP_ID=
 
 ### Önemli Notlar
 - Bu değişkenler istemci tarafında `src/firebase/firebaseConfig.js` içinde doğrulanır.
-- Değerlerden biri boş bırakılırsa uygulama başlatma aşamasında hata verir.
+- Değerlerden biri boş bırakılırsa uygulama başlatma aşamasında açıklayıcı bir kurulum ekranı gösterilir.
 - Lokal geliştirmede `.env.local` kullanılması önerilir.
+- Vercel'de bu değerler repo içinden otomatik gelmez; Project Settings → Environment Variables bölümüne ayrıca eklenmelidir.
+- Environment variable ekledikten sonra mevcut deploy'u değil yeni bir redeploy'u açmanız gerekir.
 
 ## Firebase Setup
 
@@ -128,6 +130,9 @@ Bu repo Firebase Web SDK kullanır ve uygulama açılışında aşağıdaki serv
 1. Firebase Console üzerinden bir proje oluşturun.
 2. Web app ekleyin.
 3. Authentication'ı etkinleştirin.
+4. Project settings → Your apps → Web app config kısmından aşağıdaki alanları alın: `apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`.
+5. Bu alanları `.env.local` veya Vercel Environment Variables ekranında `VITE_FIREBASE_*` isimleriyle tanımlayın.
+6. Vercel kullanıyorsanız değerleri en az `Production` ortamına ekleyin ve ardından redeploy başlatın.
 4. Firestore Database oluşturun.
 5. Gerekliyse Storage'ı etkinleştirin.
 6. Web app config değerlerini `.env.local` dosyanıza ekleyin.
