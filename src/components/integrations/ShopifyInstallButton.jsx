@@ -22,16 +22,17 @@ const ShopifyInstallButton = ({
 
     setIsRedirecting(true);
 
-    try {
-      const startInstallUrl = buildShopifyStartInstallUrl({
-        shopDomain: normalizedShop,
-        returnTo,
-      });
+    const startInstallUrl = buildShopifyStartInstallUrl({
+      shopDomain: normalizedShop,
+      returnTo,
+    });
 
+    try {
       await onBeforeRequest?.({ shopDomain: normalizedShop, startInstallUrl });
 
       const response = await fetch(startInstallUrl, {
         method: 'GET',
+        mode: 'cors',
         headers: {
           Accept: 'application/json',
         },
@@ -45,6 +46,14 @@ const ShopifyInstallButton = ({
 
       window.location.assign(payload.installUrl);
     } catch (error) {
+      const isNetworkLikeError = error instanceof TypeError || (error instanceof Error && /failed to fetch/i.test(error.message));
+
+      if (isNetworkLikeError) {
+        const fallbackUrl = `${startInstallUrl}${startInstallUrl.includes('?') ? '&' : '?'}redirect=1`;
+        window.location.assign(fallbackUrl);
+        return;
+      }
+
       setIsRedirecting(false);
       onError?.(error instanceof Error ? error : new Error('Shopify yönlendirmesi başarısız oldu.'));
     }

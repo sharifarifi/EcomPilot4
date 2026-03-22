@@ -5,7 +5,7 @@ import { manualSync } from './handlers/manualSync.js';
 import { startInstall } from './handlers/startInstall.js';
 import { webhookReceiver } from './handlers/webhookReceiver.js';
 
-export const shopifyStartInstall = onRequest(startInstall);
+export const shopifyStartInstall = onRequest({ cors: true }, startInstall);
 export const shopifyAuthCallback = onRequest(authCallback);
 export const shopifyWebhookReceiver = onRequest({ cors: false }, webhookReceiver);
 export const shopifyManualSync = onRequest(manualSync);
