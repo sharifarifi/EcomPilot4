@@ -1,4 +1,10 @@
-import type { ShopifyProductPayload, ShopifyProductVariantPayload } from './shopifyClient.js';
+import type {
+  ShopifyOrderLineItemPayload,
+  ShopifyOrderPayload,
+  ShopifyProductPayload,
+  ShopifyProductVariantPayload,
+  ShopifyShippingAddressPayload
+} from './shopifyClient.js';
 
 export type NormalizedShopifyVariant = {
   shopifyVariantId: string;
@@ -19,6 +25,47 @@ export type NormalizedShopifyProduct = {
   storeId: string;
 };
 
+export type NormalizedShopifyLineItem = {
+  shopifyLineItemId: string;
+  title: string;
+  sku: string;
+  quantity: number;
+  price: string;
+};
+
+export type NormalizedShopifyShippingAddress = {
+  name: string;
+  address1: string;
+  city: string;
+  province: string;
+  zip: string;
+  country: string;
+};
+
+export type NormalizedShopifyCustomer = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+};
+
+export type NormalizedShopifyOrder = {
+  source: 'shopify';
+  storeId: string;
+  shopifyOrderId: string;
+  orderName: string;
+  customer: NormalizedShopifyCustomer;
+  financialStatus: string;
+  fulfillmentStatus: string;
+  totalPrice: string;
+  currency: string;
+  lineItems: NormalizedShopifyLineItem[];
+  shippingAddress: NormalizedShopifyShippingAddress;
+  createdAtShopify: string | null;
+  updatedAtShopify: string | null;
+  syncedAt: string;
+};
+
 const asRecord = (value: unknown): Record<string, unknown> => (
   value && typeof value === 'object' ? value as Record<string, unknown> : {}
 );
@@ -27,6 +74,16 @@ const asString = (value: unknown) => {
   if (typeof value === 'string') return value;
   if (typeof value === 'number') return String(value);
   return '';
+};
+
+const asNumber = (value: unknown) => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  return 0;
 };
 
 const mapVariant = (payload: ShopifyProductVariantPayload): NormalizedShopifyVariant => {
@@ -40,6 +97,42 @@ const mapVariant = (payload: ShopifyProductVariantPayload): NormalizedShopifyVar
   };
 };
 
+const mapLineItem = (payload: ShopifyOrderLineItemPayload): NormalizedShopifyLineItem => {
+  const record = asRecord(payload);
+
+  return {
+    shopifyLineItemId: asString(record.id),
+    title: asString(record.title),
+    sku: asString(record.sku),
+    quantity: asNumber(record.quantity),
+    price: asString(record.price)
+  };
+};
+
+const mapShippingAddress = (payload: ShopifyShippingAddressPayload | null | undefined): NormalizedShopifyShippingAddress => {
+  const record = asRecord(payload);
+
+  return {
+    name: [asString(record.first_name), asString(record.last_name)].filter(Boolean).join(' ').trim(),
+    address1: asString(record.address1),
+    city: asString(record.city),
+    province: asString(record.province),
+    zip: asString(record.zip),
+    country: asString(record.country)
+  };
+};
+
+const mapCustomer = (payload: Record<string, unknown> | null | undefined): NormalizedShopifyCustomer => {
+  const record = asRecord(payload);
+
+  return {
+    firstName: asString(record.first_name),
+    lastName: asString(record.last_name),
+    email: asString(record.email),
+    phone: asString(record.phone)
+  };
+};
+
 const getProductImage = (payload: ShopifyProductPayload) => {
   const directImage = asRecord(payload.image);
   if (asString(directImage.src)) {
@@ -50,10 +143,21 @@ const getProductImage = (payload: ShopifyProductPayload) => {
   return asString(firstImage.src) || null;
 };
 
-export const mapShopifyOrder = (payload: Record<string, unknown>) => ({
-  id: payload.id,
+export const mapShopifyOrder = (payload: ShopifyOrderPayload, options: { storeId: string; syncedAt?: string }): NormalizedShopifyOrder => ({
   source: 'shopify',
-  raw: payload
+  storeId: options.storeId,
+  shopifyOrderId: asString(payload.id),
+  orderName: asString(payload.name),
+  customer: mapCustomer(payload.customer),
+  financialStatus: asString(payload.financial_status),
+  fulfillmentStatus: asString(payload.fulfillment_status),
+  totalPrice: asString(payload.total_price),
+  currency: asString(payload.currency),
+  lineItems: Array.isArray(payload.line_items) ? payload.line_items.map(mapLineItem) : [],
+  shippingAddress: mapShippingAddress(payload.shipping_address),
+  createdAtShopify: asString(payload.created_at) || null,
+  updatedAtShopify: asString(payload.updated_at) || null,
+  syncedAt: options.syncedAt || new Date().toISOString()
 });
 
 export const mapShopifyProduct = (payload: ShopifyProductPayload, options: { storeId: string; syncedAt?: string }): NormalizedShopifyProduct => ({

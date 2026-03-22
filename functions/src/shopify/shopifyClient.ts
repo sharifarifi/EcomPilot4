@@ -21,6 +21,28 @@ export type ShopifyProductsPage = {
   mode: 'placeholder';
 };
 
+export type ShopifyOrderLineItemPayload = Record<string, unknown>;
+export type ShopifyShippingAddressPayload = Record<string, unknown>;
+export type ShopifyOrderPayload = Record<string, unknown> & {
+  id?: string | number;
+  name?: string;
+  financial_status?: string;
+  fulfillment_status?: string;
+  total_price?: string | number;
+  currency?: string;
+  line_items?: ShopifyOrderLineItemPayload[];
+  shipping_address?: ShopifyShippingAddressPayload | null;
+  created_at?: string;
+  updated_at?: string;
+  customer?: Record<string, unknown> | null;
+};
+
+export type ShopifyOrdersPage = {
+  orders: ShopifyOrderPayload[];
+  nextPageCursor: string | null;
+  mode: 'placeholder';
+};
+
 export const createShopifyAdminClient = (shopDomain: string, accessToken?: string): ShopifyAdminClient => ({
   shopDomain,
   accessToken
@@ -44,6 +66,16 @@ export const fetchProductsPage = async (
   _pageCursor?: string | null
 ): Promise<ShopifyProductsPage> => ({
   products: [],
+  nextPageCursor: null,
+  mode: 'placeholder'
+});
+
+
+export const fetchOrdersPage = async (
+  _client: ShopifyAdminClient,
+  _pageCursor?: string | null
+): Promise<ShopifyOrdersPage> => ({
+  orders: [],
   nextPageCursor: null,
   mode: 'placeholder'
 });
