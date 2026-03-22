@@ -5,7 +5,14 @@ export const FIRESTORE_PATHS = {
   orders: 'orders',
   dailyReports: 'daily_reports',
   tasks: 'tasks',
-  notifications: 'notifications'
+  notifications: 'notifications',
+  shopifyStores: 'shopify_stores',
+  shopifyOrders: 'shopify_orders',
+  shopifyProducts: 'shopify_products',
+  shopifyCustomers: 'shopify_customers',
+  shopifyInventory: 'shopify_inventory',
+  integrationLogs: 'integration_logs',
+  syncStates: 'sync_states'
 };
 
 const formatLogPrefix = (service, action) => `[firebase:${service}] ${action}`;
