@@ -1,5 +1,6 @@
 import type { Request, Response } from 'firebase-functions/v2/https';
 import { adminDb } from '../config/firebaseAdmin.js';
+import { getBackendEnv } from '../config/env.js';
 import {
   exchangeAccessToken,
   hashInstallState,
@@ -7,6 +8,16 @@ import {
   normalizeShopDomain,
   verifyCallbackHmac
 } from '../shopify/shopifyAuth.js';
+
+const buildReturnUrl = (returnTo: string, status: string, shop: string) => {
+  const { appBaseUrl } = getBackendEnv();
+  const base = appBaseUrl.replace(/\/$/, '');
+  const normalizedReturnTo = returnTo.startsWith('/') ? returnTo : `/${returnTo}`;
+  const nextUrl = new URL(`${base}${normalizedReturnTo}`);
+  nextUrl.searchParams.set('shopify', status);
+  nextUrl.searchParams.set('shop', shop);
+  return nextUrl.toString();
+};
 
 export const authCallback = async (req: Request, res: Response) => {
   const params = new URLSearchParams(req.query as Record<string, string>);
@@ -34,6 +45,7 @@ export const authCallback = async (req: Request, res: Response) => {
   }
 
   const installSessionData = installSession.data();
+  const returnTo = String(installSessionData?.returnTo || '/?shopify=oauth');
   if (installSessionData?.shopDomain && installSessionData.shopDomain !== shop) {
     res.status(400).json({ error: 'Install state does not match requested shop.' });
     return;
@@ -55,31 +67,42 @@ export const authCallback = async (req: Request, res: Response) => {
     callbackMessage = error instanceof Error ? error.message : 'Token exchange başarısız oldu.';
   }
 
+  const updatedAt = new Date().toISOString();
+  const isConnected = tokenExchangeStatus === 'succeeded';
+  const connectionState = isConnected ? 'connected' : 'pending_secure_storage';
+
   await adminDb.collection('shopify_stores').doc(shop).set({
     shopDomain: shop,
-    connectionState: tokenExchangeStatus === 'succeeded' ? 'connected' : 'pending_secure_storage',
-    connected: tokenExchangeStatus === 'succeeded',
+    connectionState,
+    connected: isConnected,
     grantedScopes,
-    authCodeReceivedAt: new Date().toISOString(),
+    authCodeReceivedAt: updatedAt,
     tokenExchangeStatus,
-    updatedAt: new Date().toISOString(),
+    updatedAt,
     lastError: tokenExchangeStatus === 'failed' ? callbackMessage : null,
-    note: tokenExchangeStatus === 'succeeded'
+    note: isConnected
       ? 'Access token bu iskelet sürümünde Firestore plaintext olarak saklanmaz.'
       : 'TODO: Güvenli token saklama katmanı henüz implement edilmedi.'
   }, { merge: true });
 
+  await adminDb.collection('settings').doc('integrations').set({
+    1: {
+      connected: isConnected,
+      connectionState,
+      status: isConnected ? 'connected' : 'pending',
+      shopDomain: shop,
+      grantedScopes,
+      lastError: tokenExchangeStatus === 'failed' ? callbackMessage : null,
+      updatedAt,
+      authCodeReceivedAt: updatedAt,
+    }
+  }, { merge: true });
+
   await installSessionRef.set({
     status: tokenExchangeStatus,
-    completedAt: new Date().toISOString(),
+    completedAt: updatedAt,
     shopDomain: shop
   }, { merge: true });
 
-  res.status(tokenExchangeStatus === 'failed' ? 202 : 200).json({
-    ok: true,
-    shop,
-    tokenExchangeStatus,
-    grantedScopes,
-    message: callbackMessage
-  });
+  res.redirect(buildReturnUrl(returnTo, tokenExchangeStatus, shop));
 };

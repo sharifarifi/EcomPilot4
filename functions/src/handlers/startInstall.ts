@@ -11,6 +11,8 @@ import {
 
 export const startInstall = async (req: Request, res: Response) => {
   const shop = normalizeShopDomain(String(req.query.shop || '').trim());
+  const returnTo = String(req.query.returnTo || '/?shopify=oauth').trim() || '/?shopify=oauth';
+  const redirectMode = String(req.query.redirect || '').trim() === '1';
 
   if (!hasShopifyEnv()) {
     res.status(500).json({ error: 'Shopify environment variables are not fully configured.' });
@@ -29,9 +31,15 @@ export const startInstall = async (req: Request, res: Response) => {
   await adminDb.collection('shopify_install_sessions').doc(stateHash).set({
     shopDomain: shop,
     stateHash,
+    returnTo,
     status: 'created',
     createdAt: new Date().toISOString()
   }, { merge: true });
 
-  res.status(200).json({ shop, state, installUrl });
+  if (redirectMode) {
+    res.redirect(installUrl);
+    return;
+  }
+
+  res.status(200).json({ shop, state, installUrl, returnTo });
 };
