@@ -352,6 +352,17 @@ const FirebaseConfigNotice = () => (
           <p>3. Vercel / Project Settings / Environment Variables bölümünde tüm <span className="font-mono">VITE_FIREBASE_*</span> değişkenlerini en az <span className="font-semibold">Production</span> ortamına ekleyin.</p>
           <p>4. Değişkenleri ekledikten sonra <span className="font-semibold">Redeploy</span> çalıştırın; eski deployment bu değerleri sonradan otomatik almaz.</p>
         </div>
+        <p className="font-semibold mb-2">Vercel'de yapmanız gerekenler</p>
+        <ol className="list-decimal pl-5 space-y-2">
+          <li>Firebase Console → Project settings → Your apps → Web app config alanını açın.</li>
+          <li>Lokalinizde çalışan bir <code>.env.local</code> varsa aynı değerleri kopyalayın.</li>
+          <li>Vercel → Project Settings → Environment Variables bölümünde tüm <code>VITE_FIREBASE_*</code> değişkenlerini en az <strong>Production</strong> ortamına ekleyin.</li>
+          <li>Değişkenleri ekledikten sonra <strong>Redeploy</strong> çalıştırın; eski deployment bu değerleri sonradan otomatik almaz.</li>
+        <ol className="list-decimal pl-5 space-y-1">
+          <li>Project Settings → Environment Variables bölümünü açın.</li>
+          <li><code>VITE_FIREBASE_*</code> değişkenlerinin tamamını Production ortamına ekleyin.</li>
+          <li>Deploy'u yeniden tetikleyin.</li>
+        </ol>
       </div>
     </div>
   </div>
