@@ -345,6 +345,13 @@ const FirebaseConfigNotice = () => (
         <pre className="whitespace-pre-wrap font-mono">{firebaseEnvError}</pre>
       </div>
       <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
+        <p className="mb-3 font-semibold">Vercel'de yapmanız gerekenler</p>
+        <div className="space-y-2">
+          <p>1. Firebase Console / Project settings / Your apps / Web app config alanını açın.</p>
+          <p>2. Lokalinizde çalışan <span className="font-mono">.env.local</span> dosyası varsa aynı değerleri kopyalayın.</p>
+          <p>3. Vercel / Project Settings / Environment Variables bölümünde tüm <span className="font-mono">VITE_FIREBASE_*</span> değişkenlerini en az <span className="font-semibold">Production</span> ortamına ekleyin.</p>
+          <p>4. Değişkenleri ekledikten sonra <span className="font-semibold">Redeploy</span> çalıştırın; eski deployment bu değerleri sonradan otomatik almaz.</p>
+        </div>
         <p className="font-semibold mb-2">Vercel'de yapmanız gerekenler</p>
         <ol className="list-decimal pl-5 space-y-2">
           <li>Firebase Console → Project settings → Your apps → Web app config alanını açın.</li>
