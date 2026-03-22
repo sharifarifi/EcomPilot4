@@ -55,7 +55,7 @@ Aşağıdaki klasörler onboarding açısından en önemli giriş noktalarıdır
 - `src/firebase/`: Firestore/Auth/Storage erişimi ve servis katmanı.
 - `src/components/`: ekranlar ve modüler UI bileşenleri.
 - `src/demo-data/`: demo amaçlı rapor ve entegrasyon verileri.
-- `.env.example`: gerekli Vite/Firebase ortam değişkenleri.
+- `.env.example`: frontend ve backend için örnek environment değişkenleri.
 
 ## Gereksinimler
 
@@ -69,7 +69,7 @@ Projeyi lokal ortamda çalıştırmak için önerilen minimum gereksinimler:
 
 1. Repoyu klonlayın.
 2. Bağımlılıkları yükleyin.
-3. Ortam değişkenlerini tanımlayın.
+3. Frontend ve backend ortam değişkenlerini tanımlayın.
 4. Firebase tarafında Authentication ve Firestore kurulumunu tamamlayın.
 5. Geliştirme sunucusunu başlatın.
 
@@ -88,6 +88,7 @@ Yeni geliştirici için hızlı kurulum kontrol listesi:
 - [ ] Node.js sürümü `20+`
 - [ ] `npm install` çalıştırıldı
 - [ ] `.env.local` dosyası `.env.example` baz alınarak hazırlandı
+- [ ] Backend için gerekli Shopify/Firebase değişkenleri ilgili Functions runtime ortamına tanımlandı
 - [ ] Firebase projesi oluşturuldu ve web app config değerleri ortama eklendi
 - [ ] `npm run dev` ile lokal geliştirme sunucusu açıldı
 - [ ] `npm run build` ile production build doğrulandı
@@ -97,7 +98,11 @@ Bu checklist özellikle sözlü onboarding bilgisini azaltmak ve yeni gelen geli
 
 ## Environment Değişkenleri
 
-Uygulama açılırken Firebase ayarları eksikse hata fırlatır. Bu nedenle aşağıdaki değişkenlerin tamamı zorunludur:
+Bu repoda environment sözleşmesi artık ikiye ayrılır:
+
+### Frontend değişkenleri
+
+Frontend tarafında aşağıdaki `VITE_*` değişkenleri istemci uygulaması tarafından kullanılır ve `src/firebase/firebaseConfig.js` içinde doğrulanır:
 
 ```env
 VITE_FIREBASE_API_KEY=
@@ -108,13 +113,29 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 ```
 
+### Backend değişkenleri
+
+`functions/src/config/env.ts` dosyasına göre backend Shopify/Firebase iskeleti şu değişkenleri bekler:
+
+```env
+APP_BASE_URL=
+FIREBASE_PROJECT_ID=
+SHOPIFY_API_KEY=
+SHOPIFY_API_SECRET=
+SHOPIFY_APP_SCOPES=
+SHOPIFY_APP_URL=
+```
+
+`SHOPIFY_WEBHOOK_SECRET` de backend webhook doğrulaması için örnek dosyada yer alır, ancak mevcut repo dosyalarına göre zorunlu backend liste kontrolü içinde ayrı tutulmuştur.
+
 Örnek dosya: `.env.example`.
 
 ### Önemli Notlar
-- Bu değişkenler istemci tarafında `src/firebase/firebaseConfig.js` içinde doğrulanır.
-- Değerlerden biri boş bırakılırsa uygulama başlatma aşamasında açıklayıcı bir kurulum ekranı gösterilir.
-- Lokal geliştirmede `.env.local` kullanılması önerilir.
-- Vercel'de bu değerler repo içinden otomatik gelmez; Project Settings → Environment Variables bölümüne ayrıca eklenmelidir.
+- Frontend değişkenleri istemciye açılır; Shopify secret değerleri burada tutulmamalıdır.
+- Shopify secret/token/webhook secret gibi hassas bilgiler frontend config içine veya Firestore'da plaintext olarak yazılmamalıdır.
+- Lokal frontend geliştirmede `.env.local` kullanılması önerilir.
+- Backend değişkenlerinin Functions runtime ortamına nasıl enjekte edileceği deployment altyapısına göre değişebilir; bu repo içinden tek bir production yöntemi kesin olarak doğrulanamıyor.
+- Vercel'de frontend değişkenleri repo içinden otomatik gelmez; Project Settings → Environment Variables bölümüne ayrıca eklenmelidir.
 - Environment variable ekledikten sonra mevcut deploy'u değil yeni bir redeploy'u açmanız gerekir.
 
 ## Firebase Setup
@@ -136,6 +157,12 @@ Bu repo Firebase Web SDK kullanır ve uygulama açılışında aşağıdaki serv
 4. Firestore Database oluşturun.
 5. Gerekliyse Storage'ı etkinleştirin.
 6. Web app config değerlerini `.env.local` dosyanıza ekleyin.
+
+### Backend / Shopify Setup Notu
+
+- `functions/src/config/env.ts` backend tarafında `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `SHOPIFY_APP_SCOPES`, `SHOPIFY_APP_URL`, `FIREBASE_PROJECT_ID` ve `APP_BASE_URL` değişkenlerini bekler.
+- Shopify API secret, webhook secret veya benzeri hassas değerler frontend `.env` alanlarına taşınmamalıdır.
+- Bu repoda Shopify token saklama stratejisi ve production secret management altyapısı tamamen doğrulanmış değildir; gerçek ortamda secret manager / provider seçimi ayrıca netleştirilmelidir.
 
 ### Auth Akışı Hakkında
 
