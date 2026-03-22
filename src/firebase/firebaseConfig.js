@@ -17,16 +17,16 @@ const missingFirebaseEnvVars = requiredFirebaseEnvVars.filter((envVar) => {
   return typeof value !== "string" || value.trim() === "";
 });
 
-if (missingFirebaseEnvVars.length > 0) {
-  throw new Error(
-    [
+export const firebaseEnvError = missingFirebaseEnvVars.length > 0
+  ? [
       "Firebase yapılandırması eksik veya geçersiz.",
       "Aşağıdaki Vite environment değişkenlerini tanımlayın:",
       ...missingFirebaseEnvVars.map((envVar) => `- ${envVar}`),
       "Örnek: .env.local veya dağıtım ortamı değişkenleri.",
     ].join("\n")
-  );
-}
+  : null;
+
+export const firebaseEnabled = !firebaseEnvError;
 
 // 'export' kelimesi KRİTİK ÖNEME SAHİPTİR.
 export const firebaseConfig = {
@@ -39,11 +39,11 @@ export const firebaseConfig = {
 };
 
 // Uygulamayı başlat
-const app = initializeApp(firebaseConfig);
+const app = firebaseEnabled ? initializeApp(firebaseConfig) : null;
 
 // Servisleri dışa aktar
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app) : null;
+export const storage = app ? getStorage(app) : null;
 
 export default app;
