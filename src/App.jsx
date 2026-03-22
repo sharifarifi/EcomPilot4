@@ -20,6 +20,7 @@ import OperationsManager from './components/OperationsManager';
 import Settings from './components/settings/SettingsLayout';
 import ReportsManager from './components/reports/ReportsManager';
 import Profile from './components/Profile';
+import ShopifyOrdersPage from './components/shopify/ShopifyOrdersPage';
 
 // Yeni Eklenen Bildirim Zili
 import NotificationBell from './components/common/NotificationBell';
@@ -317,16 +318,20 @@ const MainApp = () => {
             : <AccessDeniedMessage title="Ayarlar" message="Sistem ayarlarına sadece yöneticiler erişebilir."/>
         )}
 
-        {['shopify-orders', 'shopify-products', 'integration-health'].includes(activeTab) && (
+        {activeTab === 'shopify-orders' && (
+            hasPerm('settings')
+            ? <ShopifyOrdersPage />
+            : <AccessDeniedMessage title="Shopify" message="Shopify ve entegrasyon görünümüne erişim yetkiniz bulunmamaktadır."/>
+        )}
+
+        {['shopify-products', 'integration-health'].includes(activeTab) && (
             hasPerm('settings')
             ? <ComingSoonPanel
                 title={getTitle()}
                 description={
-                  activeTab === 'shopify-orders'
-                    ? 'Bu menü girişi eklendi ancak Shopify sipariş ekranı için bu repoda henüz hazır bir sayfa bileşeni bulunmuyor.'
-                    : activeTab === 'shopify-products'
-                      ? 'Bu menü girişi eklendi ancak Shopify ürün ekranı için bu repoda henüz hazır bir sayfa bileşeni bulunmuyor.'
-                      : 'Bu menü girişi eklendi ancak entegrasyon sağlık ekranı için bu repoda henüz hazır bir sayfa bileşeni bulunmuyor.'
+                  activeTab === 'shopify-products'
+                    ? 'Bu menü girişi eklendi ancak Shopify ürün ekranı için bu repoda henüz hazır bir sayfa bileşeni bulunmuyor.'
+                    : 'Bu menü girişi eklendi ancak entegrasyon sağlık ekranı için bu repoda henüz hazır bir sayfa bileşeni bulunmuyor.'
                 }
               />
             : <AccessDeniedMessage title="Shopify" message="Shopify ve entegrasyon görünümüne erişim yetkiniz bulunmamaktadır."/>
