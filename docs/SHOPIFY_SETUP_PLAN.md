@@ -29,8 +29,9 @@
    - Endpoint hataları toast/log olarak kullanıcıya gösterilecek.
 
 6. `.env.example`
-   - Frontend için sadece `VITE_SHOPIFY_FUNCTIONS_BASE_URL` örneği verilecek.
-   - Callback URL artık backend tarafından `SHOPIFY_APP_URL` üzerinden hesaplanacak.
+   - Frontend için `VITE_SHOPIFY_FUNCTIONS_BASE_URL` opsiyonel olacak.
+   - Bu değer boşsa frontend `VITE_FIREBASE_PROJECT_ID` üzerinden varsayılan Functions URL türetecek.
+   - Callback URL backend tarafından `SHOPIFY_APP_URL` üzerinden hesaplanacak.
 
 ## Install flow özeti
 

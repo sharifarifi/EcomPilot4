@@ -16,12 +16,29 @@ const getOrigin = () => {
   return 'http://localhost:5173';
 };
 
-const getFunctionsBaseUrl = () => (import.meta.env.VITE_SHOPIFY_FUNCTIONS_BASE_URL || '').trim().replace(/\/$/, '');
+const getDerivedFunctionsBaseUrl = () => {
+  const origin = getOrigin();
+  const projectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID || '').trim();
+
+  if (/localhost|127\.0\.0\.1/.test(origin)) {
+    return `${origin.replace(/\/$/, '')}/api`;
+  }
+
+  if (projectId) {
+    return `https://us-central1-${projectId}.cloudfunctions.net`;
+  }
+
+  return '';
+};
+
+const getFunctionsBaseUrl = () => (
+  (import.meta.env.VITE_SHOPIFY_FUNCTIONS_BASE_URL || '').trim().replace(/\/$/, '') || getDerivedFunctionsBaseUrl()
+);
 
 const buildFunctionsUrl = (path) => {
   const baseUrl = getFunctionsBaseUrl();
   if (!baseUrl) {
-    throw new Error('VITE_SHOPIFY_FUNCTIONS_BASE_URL tanımlanmadı.');
+    throw new Error('Shopify Functions endpoint bulunamadı. VITE_SHOPIFY_FUNCTIONS_BASE_URL tanımlayın.');
   }
 
   return `${baseUrl}/${path.replace(/^\//, '')}`;
@@ -31,6 +48,7 @@ export const shopifyConfig = {
   defaultShopDomain: normalizeShopDomain(import.meta.env.VITE_SHOPIFY_STORE_DOMAIN || ''),
   appOrigin: getOrigin(),
   functionsBaseUrl: getFunctionsBaseUrl(),
+  functionsBaseUrlSource: (import.meta.env.VITE_SHOPIFY_FUNCTIONS_BASE_URL || '').trim() ? 'env' : 'derived',
 };
 
 export const buildShopifyStartInstallUrl = ({

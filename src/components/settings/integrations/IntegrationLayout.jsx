@@ -474,7 +474,7 @@ const IntegrationLayout = () => {
                               <div>
                                 <div className="text-sm font-bold text-slate-800">Hazır install flow</div>
                                 <div className="mt-1 text-xs text-slate-500">
-                                  Buton önce güvenli Functions endpoint'inden Shopify authorize URL alır, ardından kullanıcıyı Shopify OAuth ekranına yönlendirir.
+                                  Buton önce Functions endpoint'inden Shopify authorize URL alır, ardından kullanıcıyı Shopify OAuth ekranına yönlendirir.
                                 </div>
                               </div>
                               <ShopifyInstallButton
@@ -483,6 +483,11 @@ const IntegrationLayout = () => {
                                 onError={handleShopifyInstallError}
                               />
                             </div>
+                            {shopifyConfig.functionsBaseUrlSource === 'derived' && (
+                              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+                                `VITE_SHOPIFY_FUNCTIONS_BASE_URL` tanımlı değil; sistem varsayılan olarak <span className="font-mono">{shopifyConfig.functionsBaseUrl}</span> adresini kullanıyor.
+                              </div>
+                            )}
                             <div className="mt-3 rounded-lg bg-slate-900 px-3 py-2 font-mono text-[11px] text-slate-200 break-all">
                               {(() => {
                                 try {
