@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 
 import { saveIntegration, subscribeToIntegrations } from '../../../firebase/integrationSettingsService';
+import { buildShopifyInstallUrl, normalizeShopDomain, shopifyConfig } from '../../../config/shopify';
+import ShopifyInstallButton from '../../integrations/ShopifyInstallButton';
 import EcommerceApps from './EcommerceApps';
 import MarketplaceApps from './MarketplaceApps';
 import LogisticsApps from './LogisticsApps';
@@ -17,6 +19,7 @@ const IntegrationLayout = () => {
   const [activeTab, setActiveTab] = useState('E-Ticaret');
   const [toasts, setToasts] = useState([]);
   const logsEndRef = useRef(null);
+  const toastIdRef = useRef(0);
 
   const baseApps = useMemo(
     () => ([
@@ -74,7 +77,7 @@ const IntegrationLayout = () => {
   );
 
   const showToast = (message, type = 'success') => {
-    const id = Date.now();
+    const id = (toastIdRef.current += 1);
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => setToasts((prev) => prev.filter((toast) => toast.id !== id)), 3000);
   };
@@ -317,6 +320,41 @@ const IntegrationLayout = () => {
     showToast(`${actionLabel} henüz backend entegrasyonu gerektiriyor.`, 'error');
   };
 
+  const handleShopifyInstallRedirect = async ({ installUrl, shopDomain }) => {
+    appendLocalLog(`OAuth install başlatıldı: ${shopDomain}`);
+
+    updateSelectedAppDraft((prev) => ({
+      ...prev,
+      fields: {
+        ...(prev.fields || {}),
+        shopUrl: shopDomain,
+      },
+      installUrl,
+      updatedAt: new Date().toISOString(),
+    }));
+
+    await saveIntegration(selectedApp.id, {
+      ...selectedApp,
+      fields: {
+        ...(selectedApp.fields || {}),
+        shopUrl: shopDomain,
+      },
+      shopDomain,
+      status: 'pending',
+      connectionState: 'pending_oauth',
+      installUrl,
+      updatedAt: new Date().toISOString(),
+      logs: [
+        {
+          time: new Date().toLocaleTimeString('tr-TR'),
+          msg: `OAuth install başlatıldı (${shopDomain})`,
+          status: 'success',
+        },
+        ...(selectedApp.logs || []),
+      ].slice(0, 100),
+    });
+  };
+
   const renderTabs = () => (
     <div className="flex gap-1 overflow-x-auto border-b border-slate-200 pb-1 mb-6 custom-scrollbar">
       {[
@@ -424,43 +462,72 @@ const IntegrationLayout = () => {
                         </div>
                       )}
                       {isShopifyApp(selectedApp) && (
-                        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <button
-                            onClick={selectedApp.status === 'connected' ? () => handleShopifyAction('Refresh Connection') : handleConnect}
-                            disabled={isConnecting}
-                            className="bg-blue-600 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg shadow-blue-200"
-                            type="button"
-                          >
-                            {isConnecting ? <Loader2 size={18} className="animate-spin" /> : <Wifi size={18} />}
-                            {isConnecting ? 'Bağlantı Güncelleniyor...' : selectedApp.status === 'connected' ? 'Refresh Connection' : 'Connect with Shopify'}
-                          </button>
-                          <button
-                            onClick={() => handleShopifyAction('Start Initial Sync')}
-                            disabled={selectedApp.status !== 'connected'}
-                            className="bg-white border border-slate-200 text-slate-700 py-3.5 rounded-xl text-sm font-bold hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
-                            type="button"
-                          >
-                            <Activity size={18} />
-                            Start Initial Sync
-                          </button>
-                          <button
-                            onClick={() => handleShopifyAction('Sync Orders')}
-                            disabled={selectedApp.status !== 'connected'}
-                            className="bg-white border border-slate-200 text-slate-700 py-3.5 rounded-xl text-sm font-bold hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
-                            type="button"
-                          >
-                            <ShoppingBag size={18} />
-                            Sync Orders
-                          </button>
-                          <button
-                            onClick={() => handleShopifyAction('Sync Products')}
-                            disabled={selectedApp.status !== 'connected'}
-                            className="bg-white border border-slate-200 text-slate-700 py-3.5 rounded-xl text-sm font-bold hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
-                            type="button"
-                          >
-                            <Globe size={18} />
-                            Sync Products
-                          </button>
+                        <div className="mt-6 space-y-4">
+                          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                              <div>
+                                <div className="text-sm font-bold text-slate-800">Hazır install flow</div>
+                                <div className="mt-1 text-xs text-slate-500">
+                                  Buton backend install endpoint'ine `shop`, `redirectUri` ve `returnTo` query parametreleriyle gider.
+                                </div>
+                              </div>
+                              <ShopifyInstallButton
+                                shopDomain={selectedApp.fields?.shopUrl || shopifyConfig.defaultShopDomain}
+                                onBeforeRedirect={handleShopifyInstallRedirect}
+                              />
+                            </div>
+                            <div className="mt-3 rounded-lg bg-slate-900 px-3 py-2 font-mono text-[11px] text-slate-200 break-all">
+                              {(() => {
+                                try {
+                                  return buildShopifyInstallUrl({
+                                    shopDomain: normalizeShopDomain(selectedApp.fields?.shopUrl || shopifyConfig.defaultShopDomain),
+                                    returnTo: '/settings?tab=integrations&provider=shopify',
+                                  });
+                                } catch {
+                                  return 'Shopify install URL oluşturmak için mağaza domaini gerekli.';
+                                }
+                              })()}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button
+                              onClick={selectedApp.status === 'connected' ? () => handleShopifyAction('Refresh Connection') : handleConnect}
+                              disabled={isConnecting}
+                              className="bg-blue-600 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg shadow-blue-200"
+                              type="button"
+                            >
+                              {isConnecting ? <Loader2 size={18} className="animate-spin" /> : <Wifi size={18} />}
+                              {isConnecting ? 'Bağlantı Güncelleniyor...' : selectedApp.status === 'connected' ? 'Refresh Connection' : 'Connect with Shopify'}
+                            </button>
+                            <button
+                              onClick={() => handleShopifyAction('Start Initial Sync')}
+                              disabled={selectedApp.status !== 'connected'}
+                              className="bg-white border border-slate-200 text-slate-700 py-3.5 rounded-xl text-sm font-bold hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                              type="button"
+                            >
+                              <Activity size={18} />
+                              Start Initial Sync
+                            </button>
+                            <button
+                              onClick={() => handleShopifyAction('Sync Orders')}
+                              disabled={selectedApp.status !== 'connected'}
+                              className="bg-white border border-slate-200 text-slate-700 py-3.5 rounded-xl text-sm font-bold hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                              type="button"
+                            >
+                              <ShoppingBag size={18} />
+                              Sync Orders
+                            </button>
+                            <button
+                              onClick={() => handleShopifyAction('Sync Products')}
+                              disabled={selectedApp.status !== 'connected'}
+                              className="bg-white border border-slate-200 text-slate-700 py-3.5 rounded-xl text-sm font-bold hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                              type="button"
+                            >
+                              <Globe size={18} />
+                              Sync Products
+                            </button>
+                          </div>
                         </div>
                       )}
                       {selectedApp.status === 'disconnected' && !isShopifyApp(selectedApp) && (
