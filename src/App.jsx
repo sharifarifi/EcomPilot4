@@ -330,6 +330,13 @@ const SidebarSubItem = ({ icon, label, active, onClick }) => (
   </button>
 );
 
+const FIREBASE_SETUP_STEPS = [
+  '1. Firebase Console / Project settings / Your apps / Web app config alanını açın.',
+  '2. Lokalinizde çalışan .env.local dosyası varsa aynı değerleri kopyalayın.',
+  '3. Vercel / Project Settings / Environment Variables bölümünde tüm VITE_FIREBASE_* değişkenlerini en az Production ortamına ekleyin.',
+  '4. Değişkenleri ekledikten sonra Redeploy çalıştırın; eski deployment bu değerleri sonradan otomatik almaz.',
+];
+
 const FirebaseConfigNotice = () => (
   <div className="min-h-screen bg-slate-50 px-6 py-10 flex items-center justify-center">
     <div className="w-full max-w-2xl rounded-3xl border border-amber-200 bg-white p-8 shadow-xl">
@@ -347,22 +354,10 @@ const FirebaseConfigNotice = () => (
       <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
         <p className="mb-3 font-semibold">Vercel'de yapmanız gerekenler</p>
         <div className="space-y-2">
-          <p>1. Firebase Console / Project settings / Your apps / Web app config alanını açın.</p>
-          <p>2. Lokalinizde çalışan <span className="font-mono">.env.local</span> dosyası varsa aynı değerleri kopyalayın.</p>
-          <p>3. Vercel / Project Settings / Environment Variables bölümünde tüm <span className="font-mono">VITE_FIREBASE_*</span> değişkenlerini en az <span className="font-semibold">Production</span> ortamına ekleyin.</p>
-          <p>4. Değişkenleri ekledikten sonra <span className="font-semibold">Redeploy</span> çalıştırın; eski deployment bu değerleri sonradan otomatik almaz.</p>
+          {FIREBASE_SETUP_STEPS.map((step) => (
+            <p key={step}>{step}</p>
+          ))}
         </div>
-        <p className="font-semibold mb-2">Vercel'de yapmanız gerekenler</p>
-        <ol className="list-decimal pl-5 space-y-2">
-          <li>Firebase Console → Project settings → Your apps → Web app config alanını açın.</li>
-          <li>Lokalinizde çalışan bir <code>.env.local</code> varsa aynı değerleri kopyalayın.</li>
-          <li>Vercel → Project Settings → Environment Variables bölümünde tüm <code>VITE_FIREBASE_*</code> değişkenlerini en az <strong>Production</strong> ortamına ekleyin.</li>
-          <li>Değişkenleri ekledikten sonra <strong>Redeploy</strong> çalıştırın; eski deployment bu değerleri sonradan otomatik almaz.</li>
-        <ol className="list-decimal pl-5 space-y-1">
-          <li>Project Settings → Environment Variables bölümünü açın.</li>
-          <li><code>VITE_FIREBASE_*</code> değişkenlerinin tamamını Production ortamına ekleyin.</li>
-          <li>Deploy'u yeniden tetikleyin.</li>
-        </ol>
       </div>
     </div>
   </div>
