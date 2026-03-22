@@ -1,19 +1,19 @@
 import { db } from "./firebaseConfig";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 
-const DOC_REF = doc(db, "settings", "general");
+const getDocRef = () => doc(db, "settings", "general");
 
 export const getGeneralSettings = async () => {
-  const docSnap = await getDoc(DOC_REF);
+  const docSnap = await getDoc(getDocRef());
   return docSnap.exists() ? docSnap.data() : null;
 };
 
 export const saveGeneralSettings = async (data) => {
-  await setDoc(DOC_REF, data, { merge: true });
+  await setDoc(getDocRef(), data, { merge: true });
 };
 
 export const subscribeToGeneralSettings = (callback) => {
-  return onSnapshot(DOC_REF, (doc) => {
+  return onSnapshot(getDocRef(), (doc) => {
     if (doc.exists()) callback(doc.data());
   });
 };
