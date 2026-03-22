@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import { saveIntegration, subscribeToIntegrations } from '../../../firebase/integrationSettingsService';
-import { buildShopifyInstallUrl, normalizeShopDomain, shopifyConfig } from '../../../config/shopify';
+import { buildShopifyStartInstallUrl, normalizeShopDomain, shopifyConfig } from '../../../config/shopify';
 import ShopifyInstallButton from '../../integrations/ShopifyInstallButton';
 import EcommerceApps from './EcommerceApps';
 import MarketplaceApps from './MarketplaceApps';
@@ -320,8 +320,8 @@ const IntegrationLayout = () => {
     showToast(`${actionLabel} henüz backend entegrasyonu gerektiriyor.`, 'error');
   };
 
-  const handleShopifyInstallRedirect = async ({ installUrl, shopDomain }) => {
-    appendLocalLog(`OAuth install başlatıldı: ${shopDomain}`);
+  const handleShopifyInstallRequest = async ({ startInstallUrl, shopDomain }) => {
+    appendLocalLog(`OAuth install isteği hazırlandı: ${shopDomain}`);
 
     updateSelectedAppDraft((prev) => ({
       ...prev,
@@ -329,7 +329,7 @@ const IntegrationLayout = () => {
         ...(prev.fields || {}),
         shopUrl: shopDomain,
       },
-      installUrl,
+      installUrl: startInstallUrl,
       updatedAt: new Date().toISOString(),
     }));
 
@@ -342,17 +342,23 @@ const IntegrationLayout = () => {
       shopDomain,
       status: 'pending',
       connectionState: 'pending_oauth',
-      installUrl,
+      installUrl: startInstallUrl,
       updatedAt: new Date().toISOString(),
       logs: [
         {
           time: new Date().toLocaleTimeString('tr-TR'),
-          msg: `OAuth install başlatıldı (${shopDomain})`,
+          msg: `OAuth install isteği hazırlandı (${shopDomain})`,
           status: 'success',
         },
         ...(selectedApp.logs || []),
       ].slice(0, 100),
     });
+  };
+
+  const handleShopifyInstallError = (error) => {
+    const message = error instanceof Error ? error.message : 'Shopify install isteği başlatılamadı.';
+    appendLocalLog(message, 'error');
+    showToast(message, 'error');
   };
 
   const renderTabs = () => (
@@ -468,20 +474,21 @@ const IntegrationLayout = () => {
                               <div>
                                 <div className="text-sm font-bold text-slate-800">Hazır install flow</div>
                                 <div className="mt-1 text-xs text-slate-500">
-                                  Buton backend install endpoint'ine `shop`, `redirectUri` ve `returnTo` query parametreleriyle gider.
+                                  Buton önce güvenli Functions endpoint'inden Shopify authorize URL alır, ardından kullanıcıyı Shopify OAuth ekranına yönlendirir.
                                 </div>
                               </div>
                               <ShopifyInstallButton
                                 shopDomain={selectedApp.fields?.shopUrl || shopifyConfig.defaultShopDomain}
-                                onBeforeRedirect={handleShopifyInstallRedirect}
+                                onBeforeRequest={handleShopifyInstallRequest}
+                                onError={handleShopifyInstallError}
                               />
                             </div>
                             <div className="mt-3 rounded-lg bg-slate-900 px-3 py-2 font-mono text-[11px] text-slate-200 break-all">
                               {(() => {
                                 try {
-                                  return buildShopifyInstallUrl({
+                                  return buildShopifyStartInstallUrl({
                                     shopDomain: normalizeShopDomain(selectedApp.fields?.shopUrl || shopifyConfig.defaultShopDomain),
-                                    returnTo: '/settings?tab=integrations&provider=shopify',
+                                    returnTo: '/?shopify=oauth',
                                   });
                                 } catch {
                                   return 'Shopify install URL oluşturmak için mağaza domaini gerekli.';
