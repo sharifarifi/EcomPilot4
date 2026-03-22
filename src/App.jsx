@@ -61,6 +61,7 @@ const MainApp = () => {
   const [isPlanningOpen, setIsPlanningOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isCommissionOpen, setIsCommissionOpen] = useState(false);
+  const [isShopifyOpen, setIsShopifyOpen] = useState(false);
   
   const [startDate, setStartDate] = useState('2026-01-01');
   const [endDate, setEndDate] = useState('2026-01-31');
@@ -90,6 +91,9 @@ const MainApp = () => {
     if (activeTab.startsWith('reports-')) return 'Raporlar ve Analizler';
     if (activeTab === 'settings') return 'Sistem Ayarları';
     if (activeTab === 'profile') return 'Profilim';
+    if (activeTab === 'shopify-orders') return 'Shopify Siparişleri';
+    if (activeTab === 'shopify-products') return 'Shopify Ürünleri';
+    if (activeTab === 'integration-health') return 'Entegrasyon Sağlığı';
     
     switch(activeTab) {
       case 'dashboard': return 'Yönetici Paneli';
@@ -178,6 +182,20 @@ const MainApp = () => {
                  <SidebarSubItem icon={<UserCheck size={18}/>} label="Personel Performans" active={activeTab === 'reports-staff'} onClick={() => setActiveTab('reports-staff')}/>
                  <SidebarSubItem icon={<Truck size={18}/>} label="Operasyon & Lojistik" active={activeTab === 'reports-operations'} onClick={() => setActiveTab('reports-operations')}/>
                  <SidebarSubItem icon={<Calculator size={18}/>} label="Finansal Raporlar" active={activeTab === 'reports-finance'} onClick={() => setActiveTab('reports-finance')}/>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-1">
+            <button onClick={() => setIsShopifyOpen(!isShopifyOpen)} className="flex items-center justify-between w-full px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all">
+              <div className="flex items-center gap-3"><Store size={20}/><span className="font-medium">Shopify</span></div>
+              {isShopifyOpen ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
+            </button>
+            {isShopifyOpen && (
+              <div className="ml-4 mt-1 space-y-1 border-l border-slate-700 pl-2">
+                 <SidebarSubItem icon={<ClipboardList size={18}/>} label="Shopify Orders" active={activeTab === 'shopify-orders'} onClick={() => setActiveTab('shopify-orders')}/>
+                 <SidebarSubItem icon={<Package size={18}/>} label="Shopify Products" active={activeTab === 'shopify-products'} onClick={() => setActiveTab('shopify-products')}/>
+                 <SidebarSubItem icon={<ShieldAlert size={18}/>} label="Integration Health" active={activeTab === 'integration-health'} onClick={() => setActiveTab('integration-health')}/>
               </div>
             )}
           </div>
@@ -299,6 +317,21 @@ const MainApp = () => {
             : <AccessDeniedMessage title="Ayarlar" message="Sistem ayarlarına sadece yöneticiler erişebilir."/>
         )}
 
+        {['shopify-orders', 'shopify-products', 'integration-health'].includes(activeTab) && (
+            hasPerm('settings')
+            ? <ComingSoonPanel
+                title={getTitle()}
+                description={
+                  activeTab === 'shopify-orders'
+                    ? 'Bu menü girişi eklendi ancak Shopify sipariş ekranı için bu repoda henüz hazır bir sayfa bileşeni bulunmuyor.'
+                    : activeTab === 'shopify-products'
+                      ? 'Bu menü girişi eklendi ancak Shopify ürün ekranı için bu repoda henüz hazır bir sayfa bileşeni bulunmuyor.'
+                      : 'Bu menü girişi eklendi ancak entegrasyon sağlık ekranı için bu repoda henüz hazır bir sayfa bileşeni bulunmuyor.'
+                }
+              />
+            : <AccessDeniedMessage title="Shopify" message="Shopify ve entegrasyon görünümüne erişim yetkiniz bulunmamaktadır."/>
+        )}
+
       </main>
     </div>
   );
@@ -314,6 +347,19 @@ const AccessDeniedMessage = ({ title, message }) => (
     <p className="text-slate-500 max-w-md mb-6">{message}</p>
     <div className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium">
         Erişim izni için yöneticinizle görüşün.
+    </div>
+  </div>
+);
+
+const ComingSoonPanel = ({ title, description }) => (
+  <div className="flex flex-col items-center justify-center h-[60vh] text-center p-8 bg-white rounded-2xl border border-slate-200 shadow-sm animate-in fade-in zoom-in duration-300">
+    <div className="bg-blue-50 p-6 rounded-full mb-6">
+      <Store size={64} className="text-blue-500" />
+    </div>
+    <h2 className="text-2xl font-bold text-slate-800 mb-2">{title}</h2>
+    <p className="text-slate-500 max-w-2xl mb-6">{description}</p>
+    <div className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium">
+      Hazır olduğunda bu alan mevcut sidebar yapısı üzerinden açılacaktır.
     </div>
   </div>
 );
