@@ -12,8 +12,7 @@ export const ecommerceData = [
     desc: 'Global e-ticaret altyapısı (Full Entegrasyon).',
     fields: {
       shopUrl: 'my-store.myshopify.com',
-      accessToken: 'shpat_8823xxxxxxxx',
-      apiSecret: 'shpss_xxxxxxxx'
+      storeName: 'My Store'
     },
     permissions: {
       orders_read: true,
@@ -25,7 +24,13 @@ export const ecommerceData = [
       inventory_write: true
     },
     advancedSettings: {
-      warehouse_selection: { label: 'Stok Düşülecek Depo (Location)', value: 'Main Warehouse (ID: 8821)', type: 'select', options: ['Main Warehouse (ID: 8821)', 'Istanbul Store (ID: 9921)', 'Ankara Hub (ID: 1120)'] },
+      initial_sync_range_days: { label: 'İlk Senkronizasyon Aralığı (Gün)', value: '30', type: 'select', options: ['7', '15', '30', '90'] },
+      sync_orders: { label: 'Siparişleri Senkronize Et', value: true, type: 'toggle' },
+      sync_products: { label: 'Ürünleri Senkronize Et', value: true, type: 'toggle' },
+      sync_customers: { label: 'Müşterileri Senkronize Et', value: true, type: 'toggle' },
+      sync_inventory: { label: 'Stokları Senkronize Et', value: true, type: 'toggle' },
+      auto_resync_on_error: { label: 'Hata Sonrası Otomatik Yeniden Dene', value: true, type: 'toggle' },
+      default_fulfillment_location_id: { label: 'Varsayılan Fulfillment Location ID', value: '8821', type: 'input' },
       order_prefix: { label: 'Sipariş Numarası Ön eki', value: 'SP-', type: 'input' },
       sync_direction: { label: 'Stok Eşitleme Yönü', value: 'Panel -> Shopify', type: 'select', options: ['Panel -> Shopify', 'Shopify -> Panel', 'Çift Yönlü'] },
       status_mapping_paid: { label: 'Shopify "Paid" Durumu Karşılığı', value: 'Onaylandı', type: 'select', options: ['Onaylandı', 'Hazırlanıyor', 'Tamamlandı'] },
