@@ -172,9 +172,13 @@ const IntegrationLayout = () => {
   const handleConnect = async () => {
     if (!selectedApp) return;
 
-    const hasEmpty = selectedApp.fields && Object.values(selectedApp.fields).some((value) => value === '');
+    const requiredFieldKeys = getRequiredFieldKeys(selectedApp);
+    const hasEmpty = requiredFieldKeys.some((key) => {
+      const value = selectedApp.fields?.[key];
+      return typeof value !== 'string' || value.trim() === '';
+    });
     if (hasEmpty) {
-      showToast('Lütfen API bilgilerini eksiksiz girin!', 'error');
+      showToast(isShopifyApp(selectedApp) ? 'Lütfen mağaza adresini girin.' : 'Lütfen API bilgilerini eksiksiz girin!', 'error');
       return;
     }
 
@@ -199,7 +203,7 @@ const IntegrationLayout = () => {
         }));
 
         setIsConnecting(false);
-        showToast(`${selectedApp.name} bağlandı ve kaydedildi!`);
+        showToast(isShopifyApp(selectedApp) ? 'Shopify bağlantı durumu kaydedildi.' : `${selectedApp.name} bağlandı ve kaydedildi!`);
       } catch (error) {
         showToast(`Bağlantı hatası: ${error.message}`, 'error');
         setIsConnecting(false);
@@ -262,6 +266,55 @@ const IntegrationLayout = () => {
     updateSelectedAppDraft((prev) => ({ ...prev, logs: [] }));
     setLiveLogs((prev) => ({ ...prev, [selectedApp.id]: [] }));
     showToast('Loglar temizlendi (Sadece yerel).');
+  };
+
+  const isShopifyApp = (app) => app?.name === 'Shopify';
+
+  const getVisibleFieldKeys = (app) => {
+    if (!app?.fields) return [];
+
+    if (isShopifyApp(app)) {
+      return ['shopUrl', 'storeName'].filter((key) => key in app.fields);
+    }
+
+    return Object.keys(app.fields);
+  };
+
+  const getRequiredFieldKeys = (app) => {
+    if (!app?.fields) return [];
+
+    if (isShopifyApp(app)) {
+      return ['shopUrl'].filter((key) => key in app.fields);
+    }
+
+    return Object.keys(app.fields);
+  };
+
+  const appendLocalLog = (message, status = 'success') => {
+    if (!selectedApp) return;
+
+    const newLog = {
+      time: new Date().toLocaleTimeString('tr-TR'),
+      msg: message,
+      status,
+    };
+
+    updateSelectedAppDraft((prev) => ({
+      ...prev,
+      logs: [newLog, ...(prev?.logs || [])].slice(0, 100),
+    }));
+
+    setLiveLogs((prev) => ({
+      ...prev,
+      [selectedApp.id]: [newLog, ...(prev[selectedApp.id] || selectedApp.logs || [])].slice(0, 100),
+    }));
+  };
+
+  const handleShopifyAction = (actionLabel) => {
+    if (!selectedApp || !isShopifyApp(selectedApp)) return;
+
+    appendLocalLog(`${actionLabel} isteği sıraya alındı (backend bekleniyor).`);
+    showToast(`${actionLabel} henüz backend entegrasyonu gerektiriyor.`, 'error');
   };
 
   const renderTabs = () => (
@@ -340,7 +393,7 @@ const IntegrationLayout = () => {
                         </div>
                       )}
                       <div className="space-y-4">
-                        {selectedApp.fields && Object.keys(selectedApp.fields).map((key) => (
+                        {selectedApp.fields && getVisibleFieldKeys(selectedApp).map((key) => (
                           <div key={key}>
                             <label className="text-xs font-bold text-slate-500 uppercase mb-1.5 block">
                               {key.replace(/([A-Z])/g, ' $1').trim()}
@@ -364,7 +417,53 @@ const IntegrationLayout = () => {
                           </div>
                         ))}
                       </div>
-                      {selectedApp.status === 'disconnected' && (
+                      {isShopifyApp(selectedApp) && (
+                        <div className="mt-6 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-900">
+                          Shopify için bu ekranda yalnızca güvenli mağaza alanları ve senkronizasyon tercihleri gösterilir.
+                          Token, secret ve webhook doğrulama gibi işlemler henüz bu repoda bulunmayan backend katmanına bağlıdır.
+                        </div>
+                      )}
+                      {isShopifyApp(selectedApp) && (
+                        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <button
+                            onClick={selectedApp.status === 'connected' ? () => handleShopifyAction('Refresh Connection') : handleConnect}
+                            disabled={isConnecting}
+                            className="bg-blue-600 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg shadow-blue-200"
+                            type="button"
+                          >
+                            {isConnecting ? <Loader2 size={18} className="animate-spin" /> : <Wifi size={18} />}
+                            {isConnecting ? 'Bağlantı Güncelleniyor...' : selectedApp.status === 'connected' ? 'Refresh Connection' : 'Connect with Shopify'}
+                          </button>
+                          <button
+                            onClick={() => handleShopifyAction('Start Initial Sync')}
+                            disabled={selectedApp.status !== 'connected'}
+                            className="bg-white border border-slate-200 text-slate-700 py-3.5 rounded-xl text-sm font-bold hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                            type="button"
+                          >
+                            <Activity size={18} />
+                            Start Initial Sync
+                          </button>
+                          <button
+                            onClick={() => handleShopifyAction('Sync Orders')}
+                            disabled={selectedApp.status !== 'connected'}
+                            className="bg-white border border-slate-200 text-slate-700 py-3.5 rounded-xl text-sm font-bold hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                            type="button"
+                          >
+                            <ShoppingBag size={18} />
+                            Sync Orders
+                          </button>
+                          <button
+                            onClick={() => handleShopifyAction('Sync Products')}
+                            disabled={selectedApp.status !== 'connected'}
+                            className="bg-white border border-slate-200 text-slate-700 py-3.5 rounded-xl text-sm font-bold hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                            type="button"
+                          >
+                            <Globe size={18} />
+                            Sync Products
+                          </button>
+                        </div>
+                      )}
+                      {selectedApp.status === 'disconnected' && !isShopifyApp(selectedApp) && (
                         <div className="mt-6 pt-4 border-t border-slate-100">
                           <button onClick={handleConnect} disabled={isConnecting} className="w-full bg-blue-600 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-blue-700 transition disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg shadow-blue-200">
                             {isConnecting ? <Loader2 size={18} className="animate-spin" /> : <Wifi size={18} />}
