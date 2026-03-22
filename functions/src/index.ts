@@ -7,6 +7,6 @@ import { webhookReceiver } from './handlers/webhookReceiver.js';
 
 export const shopifyStartInstall = onRequest(startInstall);
 export const shopifyAuthCallback = onRequest(authCallback);
-export const shopifyWebhookReceiver = onRequest({ cors: true }, webhookReceiver);
+export const shopifyWebhookReceiver = onRequest({ cors: false }, webhookReceiver);
 export const shopifyManualSync = onRequest(manualSync);
 export const shopifyConnectionTest = onRequest({ cors: true }, connectionTest);

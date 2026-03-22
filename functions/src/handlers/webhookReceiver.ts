@@ -1,23 +1,59 @@
 import type { Request, Response } from 'firebase-functions/v2/https';
 import { adminDb } from '../config/firebaseAdmin.js';
-import { verifyWebhookSignature } from '../shopify/shopifyWebhook.js';
+import {
+  buildWebhookDispatchPayload,
+  getWebhookContext,
+  verifyWebhookSignature
+} from '../shopify/shopifyWebhook.js';
 
 export const webhookReceiver = async (req: Request, res: Response) => {
   const rawBody = req.rawBody?.toString('utf8') || JSON.stringify(req.body || {});
   const signature = String(req.get('x-shopify-hmac-sha256') || '');
+  const context = getWebhookContext({
+    topic: req.get('x-shopify-topic'),
+    shopDomain: req.get('x-shopify-shop-domain'),
+    webhookId: req.get('x-shopify-webhook-id')
+  });
 
   if (!verifyWebhookSignature(rawBody, signature)) {
     res.status(401).json({ error: 'Invalid webhook signature.' });
     return;
   }
 
-  await adminDb.collection('integration_logs').add({
-    source: 'shopify',
-    topic: req.get('x-shopify-topic') || 'unknown',
-    shopDomain: req.get('x-shopify-shop-domain') || null,
-    receivedAt: new Date().toISOString(),
-    note: 'TODO: Webhook payload işleme akışı henüz implement edilmedi.'
-  });
+  const dispatchPayload = buildWebhookDispatchPayload(context);
+  const receivedAt = new Date().toISOString();
+  const dispatchId = context.webhookId || `${context.topic || 'unknown'}-${Date.now()}`;
 
-  res.status(202).json({ ok: true });
+  await adminDb.collection('integration_logs').doc(dispatchId).set({
+    source: 'shopify',
+    topic: context.topic || 'unknown',
+    shopDomain: context.shopDomain || null,
+    webhookId: context.webhookId || null,
+    receivedAt,
+    routeStatus: dispatchPayload.supported ? 'queued' : 'ignored',
+    note: dispatchPayload.supported
+      ? `Webhook kabul edildi; ${dispatchPayload.resource}/${dispatchPayload.action} işi için placeholder dispatch oluşturuldu.`
+      : 'Bu webhook konusu için henüz route tanımlı değil.'
+  }, { merge: true });
+
+  if (dispatchPayload.supported) {
+    await adminDb.collection('sync_states').doc(dispatchId).set({
+      source: 'shopify',
+      trigger: 'webhook',
+      topic: context.topic,
+      shopDomain: context.shopDomain || null,
+      webhookId: context.webhookId || null,
+      resource: dispatchPayload.resource,
+      action: dispatchPayload.action,
+      status: 'queued',
+      queuedAt: receivedAt,
+      note: 'TODO: Ağır iş yükü için gerçek queue/job dispatch katmanı henüz implement edilmedi.'
+    }, { merge: true });
+  }
+
+  res.status(202).json({
+    ok: true,
+    topic: context.topic || 'unknown',
+    supported: dispatchPayload.supported
+  });
 };
