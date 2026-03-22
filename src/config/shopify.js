@@ -20,15 +20,21 @@ const getDerivedFunctionsBaseUrl = () => {
   const origin = getOrigin();
   const projectId = (import.meta.env.VITE_FIREBASE_PROJECT_ID || '').trim();
 
+  const sameOriginApi = `${origin.replace(/\/$/, '')}/api/shopify`;
+
   if (/localhost|127\.0\.0\.1/.test(origin)) {
-    return `${origin.replace(/\/$/, '')}/api`;
+    return sameOriginApi;
+  }
+
+  if (/vercel\.app$/i.test(new URL(origin).hostname)) {
+    return sameOriginApi;
   }
 
   if (projectId) {
     return `https://us-central1-${projectId}.cloudfunctions.net`;
   }
 
-  return '';
+  return sameOriginApi;
 };
 
 const getFunctionsBaseUrl = () => (
@@ -69,7 +75,8 @@ export const buildShopifyStartInstallUrl = ({
     returnTo,
   });
 
-  return `${buildFunctionsUrl('shopifyStartInstall')}?${params.toString()}`;
+  const path = shopifyConfig.functionsBaseUrl.includes('/api/shopify') ? 'start-install' : 'shopifyStartInstall';
+  return `${buildFunctionsUrl(path)}?${params.toString()}`;
 };
 
 export { normalizeShopDomain };
