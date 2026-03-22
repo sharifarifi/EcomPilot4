@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { RefreshCw, Save, Upload, Download, Calendar, FileSpreadsheet } from 'lucide-react';
+import { RefreshCw, Upload, Calendar, FileSpreadsheet } from 'lucide-react';
 import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
 
@@ -43,9 +43,14 @@ const ScenarioPlanner = () => {
 
   // Excel Yükle ve Oku
   const handleFileUpload = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
     const reader = new FileReader();
-    
+
     reader.onload = (event) => {
       const bstr = event.target.result;
       const wb = XLSX.read(bstr, { type: 'binary' });
@@ -54,13 +59,17 @@ const ScenarioPlanner = () => {
       const data = XLSX.utils.sheet_to_json(ws);
       
       // Excel verisini state'e dönüştür
-      const newInputs = { ...inputs };
-      data.forEach(row => {
-        if (Object.prototype.hasOwnProperty.call(newInputs, row.Parametre)) {
-           newInputs[row.Parametre] = parseFloat(row.Değer);
-        }
+      setInputs((prevInputs) => {
+        const nextInputs = { ...prevInputs };
+
+        data.forEach((row) => {
+          if (Object.prototype.hasOwnProperty.call(nextInputs, row.Parametre)) {
+            nextInputs[row.Parametre] = parseFloat(row.Değer);
+          }
+        });
+
+        return nextInputs;
       });
-      setInputs(newInputs);
       alert("Excel verileri başarıyla yüklendi!");
     };
     reader.readAsBinaryString(file);

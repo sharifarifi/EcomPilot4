@@ -1,11 +1,11 @@
 import { db } from "./firebaseConfig";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 
-const DOC_REF = doc(db, "settings", "commissions");
+const getDocRef = () => doc(db, "settings", "commissions");
 
 export const getCommissionSettings = async () => {
   try {
-    const docSnap = await getDoc(DOC_REF);
+    const docSnap = await getDoc(getDocRef());
     return docSnap.exists() ? docSnap.data() : null;
   } catch (error) {
     console.error("Prim ayarları çekilemedi:", error);
@@ -15,7 +15,7 @@ export const getCommissionSettings = async () => {
 
 export const saveCommissionSettings = async (data) => {
   try {
-    await setDoc(DOC_REF, data, { merge: true });
+    await setDoc(getDocRef(), data, { merge: true });
   } catch (error) {
     console.error("Prim ayarları kaydedilemedi:", error);
     throw error;
@@ -23,7 +23,7 @@ export const saveCommissionSettings = async (data) => {
 };
 
 export const subscribeToCommissionSettings = (callback) => {
-  return onSnapshot(DOC_REF, (doc) => {
+  return onSnapshot(getDocRef(), (doc) => {
     if (doc.exists()) callback(doc.data());
     else callback(null);
   });

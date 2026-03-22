@@ -1,12 +1,12 @@
 import { db } from "./firebaseConfig";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 
-const DOC_REF = doc(db, "settings", "integrations");
+const getDocRef = () => doc(db, "settings", "integrations");
 
 // Tüm entegrasyonları tek seferde çek
 export const getIntegrationSettings = async () => {
   try {
-    const docSnap = await getDoc(DOC_REF);
+    const docSnap = await getDoc(getDocRef());
     return docSnap.exists() ? docSnap.data() : {};
   } catch (error) {
     console.error("Entegrasyon ayarları çekilemedi:", error);
@@ -18,7 +18,7 @@ export const getIntegrationSettings = async () => {
 export const saveIntegration = async (appId, data) => {
   try {
     // Veriyi { trendyol: { ...data } } formatında merge eder
-    await setDoc(DOC_REF, { [appId]: data }, { merge: true });
+    await setDoc(getDocRef(), { [appId]: data }, { merge: true });
   } catch (error) {
     console.error("Entegrasyon kaydedilemedi:", error);
     throw error;
@@ -27,7 +27,7 @@ export const saveIntegration = async (appId, data) => {
 
 // Canlı Dinleme
 export const subscribeToIntegrations = (callback) => {
-  return onSnapshot(DOC_REF, (doc) => {
+  return onSnapshot(getDocRef(), (doc) => {
     if (doc.exists()) callback(doc.data());
     else callback({});
   });

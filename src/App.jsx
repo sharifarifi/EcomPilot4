@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { firebaseEnabled, firebaseEnvError } from './firebase/firebaseConfig';
 import Login from './components/Login';
 import { LogOut, Loader, ShieldAlert } from 'lucide-react'; 
 
@@ -329,8 +330,39 @@ const SidebarSubItem = ({ icon, label, active, onClick }) => (
   </button>
 );
 
+const FirebaseConfigNotice = () => (
+  <div className="min-h-screen bg-slate-50 px-6 py-10 flex items-center justify-center">
+    <div className="w-full max-w-2xl rounded-3xl border border-amber-200 bg-white p-8 shadow-xl">
+      <div className="mb-6 inline-flex rounded-2xl bg-amber-100 p-4 text-amber-600">
+        <ShieldAlert size={32} />
+      </div>
+      <h1 className="text-3xl font-bold text-slate-900 mb-3">Firebase ayarları eksik</h1>
+      <p className="text-slate-600 mb-6 leading-7">
+        Uygulama derlenmiş olsa da Firebase environment değişkenleri Vercel projesine eklenmediği için giriş ekranı başlatılamıyor.
+        Bu yüzden artık boş ekran yerine açıklayıcı bir kurulum ekranı gösteriyoruz.
+      </p>
+      <div className="rounded-2xl bg-slate-900 p-5 text-left text-sm text-slate-100 overflow-x-auto">
+        <pre className="whitespace-pre-wrap font-mono">{firebaseEnvError}</pre>
+      </div>
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
+        <p className="mb-3 font-semibold">Vercel'de yapmanız gerekenler</p>
+        <div className="space-y-2">
+          <p>1. Firebase Console / Project settings / Your apps / Web app config alanını açın.</p>
+          <p>2. Lokalinizde çalışan <span className="font-mono">.env.local</span> dosyası varsa aynı değerleri kopyalayın.</p>
+          <p>3. Vercel / Project Settings / Environment Variables bölümünde tüm <span className="font-mono">VITE_FIREBASE_*</span> değişkenlerini en az <span className="font-semibold">Production</span> ortamına ekleyin.</p>
+          <p>4. Değişkenleri ekledikten sonra <span className="font-semibold">Redeploy</span> çalıştırın; eski deployment bu değerleri sonradan otomatik almaz.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 // --- ANA COMPONENT ---
 const App = () => {
+  if (!firebaseEnabled) {
+    return <FirebaseConfigNotice />;
+  }
+
   return (
     <BrowserRouter>
       <ErrorBoundary>

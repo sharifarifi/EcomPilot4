@@ -28,8 +28,16 @@ export const logServiceError = (service, action, error, details) => {
   console.error(formatLogPrefix(service, action), details, error);
 };
 
-export const collectionRef = (path) => collection(db, path);
-export const docRef = (path, id) => doc(db, path, id);
+const ensureDb = () => {
+  if (!db) {
+    throw new Error('Firebase Firestore henüz yapılandırılmadı.');
+  }
+
+  return db;
+};
+
+export const collectionRef = (path) => collection(ensureDb(), path);
+export const docRef = (path, id) => doc(ensureDb(), path, id);
 
 export const mapSnapshotDocs = (snapshot, mapDoc = (document) => ({ id: document.id, ...document.data() })) => (
   snapshot.docs.map(mapDoc)
