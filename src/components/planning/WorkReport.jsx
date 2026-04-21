@@ -49,6 +49,8 @@ const WorkReport = () => {
   const [tempTasks, setTempTasks] = useState([]);
   const initialTaskState = { title: '', category: '', status: 'Tamamlandı', detail: '', note: '' };
   const [currentTask, setCurrentTask] = useState(initialTaskState);
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const isEditingTask = editingTaskIndex !== null;
 
   // --- VERİ ÇEKME ---
   useEffect(() => {
@@ -209,31 +211,72 @@ const WorkReport = () => {
     setEditingReportId(null);
     setTempTasks([]);
     setReportDate(new Date().toISOString().split('T')[0]);
+    setCurrentTask(initialTaskState);
+    setEditingTaskIndex(null);
+    setEditingTaskId(null);
     setIsModalOpen(true);
+  };
+
+  const normalizeTaskForEdit = (task, fallbackIndex = 0) => ({
+    ...initialTaskState,
+    ...task,
+    id: task?.id || `task-${Date.now()}-${fallbackIndex}`
+  });
+
+  const resetTaskEditor = () => {
+    setCurrentTask(initialTaskState);
+    setEditingTaskIndex(null);
+    setEditingTaskId(null);
+  };
+
+  const closeModal = () => {
+    resetTaskEditor();
+    setIsModalOpen(false);
   };
 
   const openEditModal = (report) => {
     if (!canEditReport(report)) return;
     setEditingReportId(report.id);
     setReportDate(report.date);
-    setTempTasks(report.tasks.filter(t => !t.isSystemTask)); // Sistem işleri formda gizlenir
+    setTempTasks(
+      (report.tasks || [])
+        .filter(t => !t.isSystemTask)
+        .map((task, index) => normalizeTaskForEdit(task, index))
+    ); // Sistem işleri formda gizlenir
+    resetTaskEditor();
     setIsModalOpen(true);
+  };
+
+  const handleEditTask = (task, index) => {
+    setCurrentTask(normalizeTaskForEdit(task, index));
+    setEditingTaskIndex(index);
+    setEditingTaskId(task.id || null);
   };
 
   const handleTaskAdd = () => {
     if(!currentTask.title) return alert("Lütfen bir görev başlığı girin.");
     if(!currentTask.category) return alert("Lütfen bir departman seçiniz.");
     
-    const newTask = { ...currentTask };
+    const newTask = normalizeTaskForEdit(currentTask, tempTasks.length);
     if(editingTaskIndex !== null) {
         const updated = [...tempTasks];
         updated[editingTaskIndex] = newTask;
         setTempTasks(updated);
-        setEditingTaskIndex(null);
     } else {
         setTempTasks([...tempTasks, newTask]);
     }
-    setCurrentTask(initialTaskState); // Formu temizle
+    resetTaskEditor();
+  };
+
+  const handleTaskRemove = (taskId, index) => {
+    setTempTasks(prev => prev.filter((task, i) => (task.id || `idx-${i}`) !== (taskId || `idx-${index}`)));
+    if (editingTaskId === taskId || editingTaskIndex === index) {
+      resetTaskEditor();
+      return;
+    }
+    if (editingTaskIndex !== null && index < editingTaskIndex) {
+      setEditingTaskIndex(prev => (prev !== null ? prev - 1 : prev));
+    }
   };
 
   const handleSave = async () => {
@@ -245,7 +288,7 @@ const WorkReport = () => {
         } else {
             await addReport({ ...payload, user: userData.name, userId: userData.uid, role: userData.department || userData.role || 'Personel' });
         }
-        setIsModalOpen(false);
+        closeModal();
     } catch(e) { alert("Hata oluştu: " + e.message); }
   };
 
@@ -556,14 +599,20 @@ const WorkReport = () => {
                             <textarea rows="3" className="w-full border border-slate-300 p-2.5 rounded-lg text-sm resize-none outline-none focus:border-blue-500 transition" placeholder="Yapılan işlemler hakkında kısa not..." value={currentTask.detail} onChange={e => setCurrentTask({...currentTask, detail: e.target.value})}></textarea>
                         </div>
                     </div>
-                    <button onClick={handleTaskAdd} className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition flex items-center justify-center gap-2 mt-4 shadow-lg"><Plus size={16}/> Listeye Ekle</button>
+                    {isEditingTask && (
+                      <div className="mb-3 flex items-center justify-between text-xs bg-blue-50 border border-blue-100 text-blue-700 px-3 py-2 rounded-lg">
+                        <span>Seçili görev düzenleniyor.</span>
+                        <button onClick={resetTaskEditor} className="font-bold hover:underline">İptal</button>
+                      </div>
+                    )}
+                    <button onClick={handleTaskAdd} className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition flex items-center justify-center gap-2 mt-4 shadow-lg"><Plus size={16}/> {isEditingTask ? 'Görevi Güncelle' : 'Listeye Ekle'}</button>
                 </div>
                 
                 {/* SAĞ: LİSTE */}
                 <div className="w-1/2 bg-white flex flex-col">
                     <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                         <span className="font-bold text-slate-700 flex items-center gap-2"><List size={18}/> Eklenen Görevler <span className="bg-slate-200 text-slate-600 px-2 rounded-full text-xs">{tempTasks.length}</span></span>
-                        <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-slate-200 rounded-full transition"><X size={20} className="text-slate-400 hover:text-red-500"/></button>
+                        <button onClick={closeModal} className="p-1 hover:bg-slate-200 rounded-full transition"><X size={20} className="text-slate-400 hover:text-red-500"/></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-5 space-y-3">
                         {tempTasks.length === 0 ? (
@@ -574,7 +623,11 @@ const WorkReport = () => {
                             </div>
                         ) : (
                             tempTasks.map((t, idx) => (
-                                <div key={idx} className="p-4 border border-slate-200 rounded-xl flex justify-between items-start group hover:border-blue-400 transition bg-white shadow-sm">
+                                <div
+                                  key={t.id || idx}
+                                  onClick={() => handleEditTask(t, idx)}
+                                  className={`p-4 border rounded-xl flex justify-between items-start group transition bg-white shadow-sm cursor-pointer ${editingTaskId === t.id || editingTaskIndex === idx ? 'border-blue-400 ring-2 ring-blue-100' : 'border-slate-200 hover:border-blue-400'}`}
+                                >
                                     <div>
                                         <div className="font-bold text-sm text-slate-800">{t.title}</div>
                                         <div className="text-xs text-slate-500 mt-1 flex gap-2 items-center">
@@ -582,7 +635,10 @@ const WorkReport = () => {
                                             <span className={t.status === 'Tamamlandı' ? 'text-green-600' : 'text-blue-600'}>{t.status}</span>
                                         </div>
                                     </div>
-                                    <button onClick={() => setTempTasks(tempTasks.filter((_,i)=>i!==idx))} className="text-slate-300 hover:text-red-500 p-1 bg-slate-50 rounded-lg hover:bg-red-50 transition"><Trash2 size={16}/></button>
+                                    <div className="flex items-center gap-1">
+                                        <button onClick={(e) => { e.stopPropagation(); handleEditTask(t, idx); }} className="text-slate-300 hover:text-blue-500 p-1 bg-slate-50 rounded-lg hover:bg-blue-50 transition" title="Görevi Düzenle"><Edit size={16}/></button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleTaskRemove(t.id, idx); }} className="text-slate-300 hover:text-red-500 p-1 bg-slate-50 rounded-lg hover:bg-red-50 transition" title="Görevi Sil"><Trash2 size={16}/></button>
+                                    </div>
                                 </div>
                             ))
                         )}
