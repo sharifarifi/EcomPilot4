@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, Calendar, CheckCircle, Search, Trash2, Edit,
-  Briefcase, Filter, X, Lock, Unlock, Download, Loader2, 
+  Briefcase, Filter, X, Lock, Download, Loader2, 
   ClipboardList, ChevronDown, ChevronRight, ArrowUpDown, RefreshCw,
   List, AlertCircle // Eksik olan ikonlar eklendi
 } from 'lucide-react';
@@ -10,6 +10,11 @@ import { useAuth } from '../../context/AuthContext';
 import { subscribeToReports, addReport, updateReport, deleteReport } from '../../firebase/reportService';
 import { subscribeToTasks } from '../../firebase/taskService';
 import { getDepartments } from '../../firebase/teamService'; 
+import {
+  getLockedEditToastMessage,
+  getReportEditState,
+  getReportEditTooltip
+} from '../../utils/reportEditUtils';
 
 const WorkReport = () => {
   const { userData } = useAuth();
@@ -34,6 +39,8 @@ const WorkReport = () => {
   // --- UI STATE ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
+  const [toasts, setToasts] = useState([]);
+  const toastIdRef = useRef(0);
   
   // --- FORM STATE ---
   const [editingReportId, setEditingReportId] = useState(null); 
@@ -42,6 +49,8 @@ const WorkReport = () => {
   const [tempTasks, setTempTasks] = useState([]);
   const initialTaskState = { title: '', category: '', status: 'Tamamlandı', detail: '', note: '' };
   const [currentTask, setCurrentTask] = useState(initialTaskState);
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const isEditingTask = editingTaskIndex !== null;
 
   // --- VERİ ÇEKME ---
   useEffect(() => {
@@ -174,11 +183,27 @@ const WorkReport = () => {
     return { total, completed, rate: total > 0 ? Math.round((completed/total)*100) : 0 };
   }, [processedReports]);
 
+  const reportEditStateMap = useMemo(() => {
+    const next = new Map();
+    processedReports.forEach((report) => {
+      next.set(report.id, getReportEditState(report));
+    });
+    return next;
+  }, [processedReports]);
+
   // --- YARDIMCI FONKSİYONLAR ---
-  const isEditable = (report) => {
-    if (report.isVirtual) return false;
-    if (isManager) return true;
-    return (Date.now() - report.createdAt) < (24 * 60 * 60 * 1000); // 24 Saat kuralı
+  const showToast = (message, type = 'default') => {
+    const id = `report-toast-${toastIdRef.current}`;
+    toastIdRef.current += 1;
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
+  };
+
+  const canEditReport = (report) => {
+    const editState = reportEditStateMap.get(report.id) || getReportEditState(report);
+    if (editState.editable) return true;
+    showToast(getLockedEditToastMessage(editState), 'error');
+    return false;
   };
 
   // --- CRUD İŞLEMLERİ ---
@@ -186,30 +211,72 @@ const WorkReport = () => {
     setEditingReportId(null);
     setTempTasks([]);
     setReportDate(new Date().toISOString().split('T')[0]);
+    setCurrentTask(initialTaskState);
+    setEditingTaskIndex(null);
+    setEditingTaskId(null);
     setIsModalOpen(true);
   };
 
+  const normalizeTaskForEdit = (task, fallbackIndex = 0) => ({
+    ...initialTaskState,
+    ...task,
+    id: task?.id || `task-${Date.now()}-${fallbackIndex}`
+  });
+
+  const resetTaskEditor = () => {
+    setCurrentTask(initialTaskState);
+    setEditingTaskIndex(null);
+    setEditingTaskId(null);
+  };
+
+  const closeModal = () => {
+    resetTaskEditor();
+    setIsModalOpen(false);
+  };
+
   const openEditModal = (report) => {
+    if (!canEditReport(report)) return;
     setEditingReportId(report.id);
     setReportDate(report.date);
-    setTempTasks(report.tasks.filter(t => !t.isSystemTask)); // Sistem işleri formda gizlenir
+    setTempTasks(
+      (report.tasks || [])
+        .filter(t => !t.isSystemTask)
+        .map((task, index) => normalizeTaskForEdit(task, index))
+    ); // Sistem işleri formda gizlenir
+    resetTaskEditor();
     setIsModalOpen(true);
+  };
+
+  const handleEditTask = (task, index) => {
+    setCurrentTask(normalizeTaskForEdit(task, index));
+    setEditingTaskIndex(index);
+    setEditingTaskId(task.id || null);
   };
 
   const handleTaskAdd = () => {
     if(!currentTask.title) return alert("Lütfen bir görev başlığı girin.");
     if(!currentTask.category) return alert("Lütfen bir departman seçiniz.");
     
-    const newTask = { ...currentTask };
+    const newTask = normalizeTaskForEdit(currentTask, tempTasks.length);
     if(editingTaskIndex !== null) {
         const updated = [...tempTasks];
         updated[editingTaskIndex] = newTask;
         setTempTasks(updated);
-        setEditingTaskIndex(null);
     } else {
         setTempTasks([...tempTasks, newTask]);
     }
-    setCurrentTask(initialTaskState); // Formu temizle
+    resetTaskEditor();
+  };
+
+  const handleTaskRemove = (taskId, index) => {
+    setTempTasks(prev => prev.filter((task, i) => (task.id || `idx-${i}`) !== (taskId || `idx-${index}`)));
+    if (editingTaskId === taskId || editingTaskIndex === index) {
+      resetTaskEditor();
+      return;
+    }
+    if (editingTaskIndex !== null && index < editingTaskIndex) {
+      setEditingTaskIndex(prev => (prev !== null ? prev - 1 : prev));
+    }
   };
 
   const handleSave = async () => {
@@ -221,7 +288,7 @@ const WorkReport = () => {
         } else {
             await addReport({ ...payload, user: userData.name, userId: userData.uid, role: userData.department || userData.role || 'Personel' });
         }
-        setIsModalOpen(false);
+        closeModal();
     } catch(e) { alert("Hata oluştu: " + e.message); }
   };
 
@@ -347,7 +414,8 @@ const WorkReport = () => {
                 <tbody className="divide-y divide-slate-100">
                     {processedReports.length > 0 ? processedReports.map((report) => {
                         const isExpanded = expandedRow === report.id;
-                        const editable = isEditable(report);
+                        const editState = reportEditStateMap.get(report.id) || getReportEditState(report);
+                        const editable = editState.editable;
                         const totalTasks = report.tasks ? report.tasks.length : 0;
                         const completedTasks = report.tasks ? report.tasks.filter(t => t.status === 'Tamamlandı').length : 0;
                         const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
@@ -359,7 +427,7 @@ const WorkReport = () => {
                             <React.Fragment key={report.id}>
                                 {/* ANA SATIR */}
                                 <tr 
-                                    className={`hover:bg-slate-50 transition cursor-pointer ${isExpanded ? 'bg-blue-50/30' : ''}`}
+                                    className={`hover:bg-slate-50 transition cursor-pointer ${isExpanded ? 'bg-blue-50/30' : ''} ${editState.lockType === 'completed_locked' || editState.lockType === 'missing_completedAt' ? 'opacity-80' : ''}`}
                                     onClick={() => setExpandedRow(isExpanded ? null : report.id)}
                                 >
                                     <td className="px-6 py-4 text-center">
@@ -393,18 +461,36 @@ const WorkReport = () => {
                                                 {completedTasks}/{totalTasks}
                                             </span>
                                         </div>
+                                        <div className="mt-2 flex gap-2 flex-wrap">
+                                          {editState.lockType === 'completed_within_24h' && (
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700">
+                                              Düzenleme süresi açık ({editState.remainingHours}s)
+                                            </span>
+                                          )}
+                                          {(editState.lockType === 'completed_locked' || editState.lockType === 'missing_completedAt') && (
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                                              Düzenleme kilitli
+                                            </span>
+                                          )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        {editable ? (
-                                            <div className="flex justify-end gap-2" onClick={e=>e.stopPropagation()}>
-                                                <button onClick={()=>openEditModal(report)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Düzenle"><Edit size={16}/></button>
-                                                <button onClick={()=>handleDelete(report.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition" title="Sil"><Trash2 size={16}/></button>
-                                            </div>
-                                        ) : (
-                                            <span className="text-xs font-bold text-slate-400 flex items-center justify-end gap-1 bg-slate-100 px-2 py-1 rounded-lg inline-flex" title="Sistem işleri veya süresi dolmuş raporlar kilitlenir">
-                                                <Lock size={12}/> Kilitli
-                                            </span>
-                                        )}
+                                        <div className="flex justify-end gap-2" onClick={e=>e.stopPropagation()}>
+                                            <button
+                                              onClick={()=>openEditModal(report)}
+                                              className={`p-2 rounded-lg transition ${editable ? 'text-slate-400 hover:text-blue-600 hover:bg-blue-50' : 'text-slate-300 bg-slate-100 cursor-not-allowed'}`}
+                                              title={getReportEditTooltip(editState)}
+                                              disabled={!editable}
+                                            >
+                                              <Edit size={16}/>
+                                            </button>
+                                            <button onClick={()=>handleDelete(report.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition" title="Sil"><Trash2 size={16}/></button>
+                                            {!editable && (
+                                              <span className="text-xs font-bold text-slate-400 flex items-center justify-end gap-1 bg-slate-100 px-2 py-1 rounded-lg inline-flex" title={getReportEditTooltip(editState)}>
+                                                  <Lock size={12}/> Kilitli
+                                              </span>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
 
@@ -416,6 +502,16 @@ const WorkReport = () => {
                                                 <h4 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2">
                                                     <List size={14}/> Görev Detayları
                                                 </h4>
+                                                <div className="mb-3 flex justify-end">
+                                                  <button
+                                                    onClick={() => openEditModal(report)}
+                                                    className={`text-xs font-bold px-3 py-1.5 rounded-lg border transition ${editable ? 'border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100' : 'border-slate-200 text-slate-400 bg-slate-100 cursor-not-allowed'}`}
+                                                    title={getReportEditTooltip(editState)}
+                                                    disabled={!editable}
+                                                  >
+                                                    Raporu Düzenle
+                                                  </button>
+                                                </div>
                                                 <div className="space-y-3">
                                                     {report.tasks && report.tasks.length === 0 ? (
                                                         <span className="text-sm text-slate-400 italic">Kayıt yok.</span>
@@ -503,14 +599,20 @@ const WorkReport = () => {
                             <textarea rows="3" className="w-full border border-slate-300 p-2.5 rounded-lg text-sm resize-none outline-none focus:border-blue-500 transition" placeholder="Yapılan işlemler hakkında kısa not..." value={currentTask.detail} onChange={e => setCurrentTask({...currentTask, detail: e.target.value})}></textarea>
                         </div>
                     </div>
-                    <button onClick={handleTaskAdd} className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition flex items-center justify-center gap-2 mt-4 shadow-lg"><Plus size={16}/> Listeye Ekle</button>
+                    {isEditingTask && (
+                      <div className="mb-3 flex items-center justify-between text-xs bg-blue-50 border border-blue-100 text-blue-700 px-3 py-2 rounded-lg">
+                        <span>Seçili görev düzenleniyor.</span>
+                        <button onClick={resetTaskEditor} className="font-bold hover:underline">İptal</button>
+                      </div>
+                    )}
+                    <button onClick={handleTaskAdd} className="w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition flex items-center justify-center gap-2 mt-4 shadow-lg"><Plus size={16}/> {isEditingTask ? 'Görevi Güncelle' : 'Listeye Ekle'}</button>
                 </div>
                 
                 {/* SAĞ: LİSTE */}
                 <div className="w-1/2 bg-white flex flex-col">
                     <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                         <span className="font-bold text-slate-700 flex items-center gap-2"><List size={18}/> Eklenen Görevler <span className="bg-slate-200 text-slate-600 px-2 rounded-full text-xs">{tempTasks.length}</span></span>
-                        <button onClick={() => setIsModalOpen(false)} className="p-1 hover:bg-slate-200 rounded-full transition"><X size={20} className="text-slate-400 hover:text-red-500"/></button>
+                        <button onClick={closeModal} className="p-1 hover:bg-slate-200 rounded-full transition"><X size={20} className="text-slate-400 hover:text-red-500"/></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-5 space-y-3">
                         {tempTasks.length === 0 ? (
@@ -521,7 +623,11 @@ const WorkReport = () => {
                             </div>
                         ) : (
                             tempTasks.map((t, idx) => (
-                                <div key={idx} className="p-4 border border-slate-200 rounded-xl flex justify-between items-start group hover:border-blue-400 transition bg-white shadow-sm">
+                                <div
+                                  key={t.id || idx}
+                                  onClick={() => handleEditTask(t, idx)}
+                                  className={`p-4 border rounded-xl flex justify-between items-start group transition bg-white shadow-sm cursor-pointer ${editingTaskId === t.id || editingTaskIndex === idx ? 'border-blue-400 ring-2 ring-blue-100' : 'border-slate-200 hover:border-blue-400'}`}
+                                >
                                     <div>
                                         <div className="font-bold text-sm text-slate-800">{t.title}</div>
                                         <div className="text-xs text-slate-500 mt-1 flex gap-2 items-center">
@@ -529,7 +635,10 @@ const WorkReport = () => {
                                             <span className={t.status === 'Tamamlandı' ? 'text-green-600' : 'text-blue-600'}>{t.status}</span>
                                         </div>
                                     </div>
-                                    <button onClick={() => setTempTasks(tempTasks.filter((_,i)=>i!==idx))} className="text-slate-300 hover:text-red-500 p-1 bg-slate-50 rounded-lg hover:bg-red-50 transition"><Trash2 size={16}/></button>
+                                    <div className="flex items-center gap-1">
+                                        <button onClick={(e) => { e.stopPropagation(); handleEditTask(t, idx); }} className="text-slate-300 hover:text-blue-500 p-1 bg-slate-50 rounded-lg hover:bg-blue-50 transition" title="Görevi Düzenle"><Edit size={16}/></button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleTaskRemove(t.id, idx); }} className="text-slate-300 hover:text-red-500 p-1 bg-slate-50 rounded-lg hover:bg-red-50 transition" title="Görevi Sil"><Trash2 size={16}/></button>
+                                    </div>
                                 </div>
                             ))
                         )}
@@ -541,6 +650,16 @@ const WorkReport = () => {
                     </div>
                 </div>
             </div>
+        </div>
+      )}
+
+      {!!toasts.length && (
+        <div className="fixed bottom-5 right-5 z-[120] space-y-2 pointer-events-none">
+          {toasts.map(t => (
+            <div key={t.id} className={`pointer-events-auto px-4 py-2 rounded-lg shadow-xl text-sm font-bold text-white animate-in slide-in-from-right ${t.type === 'error' ? 'bg-red-500' : 'bg-slate-900'}`}>
+              {t.message}
+            </div>
+          ))}
         </div>
       )}
     </div>
