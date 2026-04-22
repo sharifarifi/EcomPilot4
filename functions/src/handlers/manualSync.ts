@@ -1,4 +1,4 @@
-import type { Request, Response } from 'firebase-functions/v2/https';
+import type { Request, Response } from 'express';
 import { syncAll } from '../jobs/syncAll.js';
 
 export const manualSync = async (req: Request, res: Response) => {

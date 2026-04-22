@@ -1,4 +1,4 @@
-import type { Request, Response } from 'firebase-functions/v2/https';
+import type { Request, Response } from 'express';
 import { createShopifyAdminClient, testShopConnection } from '../shopify/shopifyClient.js';
 
 export const connectionTest = async (req: Request, res: Response) => {
