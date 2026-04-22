@@ -1,4 +1,4 @@
-import type { Request, Response } from 'firebase-functions/v2/https';
+import type { Request, Response } from 'express';
 import { adminDb } from '../config/firebaseAdmin.js';
 import { getBackendEnv } from '../config/env.js';
 import {

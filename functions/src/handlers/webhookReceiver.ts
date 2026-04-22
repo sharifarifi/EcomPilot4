@@ -1,4 +1,4 @@
-import type { Request, Response } from 'firebase-functions/v2/https';
+import type { Request, Response } from 'express';
 import { adminDb } from '../config/firebaseAdmin.js';
 import {
   buildWebhookDispatchPayload,
@@ -6,7 +6,9 @@ import {
   verifyWebhookSignature
 } from '../shopify/shopifyWebhook.js';
 
-export const webhookReceiver = async (req: Request, res: Response) => {
+type FirebaseRequest = Request & { rawBody?: Buffer };
+
+export const webhookReceiver = async (req: FirebaseRequest, res: Response) => {
   const rawBody = req.rawBody?.toString('utf8') || JSON.stringify(req.body || {});
   const signature = String(req.get('x-shopify-hmac-sha256') || '');
   const context = getWebhookContext({
