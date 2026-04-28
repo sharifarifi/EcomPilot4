@@ -43,13 +43,16 @@ const TaskBoard = () => {
     };
     fetchTeamData();
 
-    const unsubscribe = subscribeToTasks((data) => {
-      setTasks(data);
-      setLoading(false);
-    });
+    const unsubscribe = subscribeToTasks(
+      (data) => {
+        setTasks(data);
+        setLoading(false);
+      },
+      { uid: userData?.uid, isManagement: isManager }
+    );
 
     return () => unsubscribe();
-  }, []);
+  }, [userData, isManager]);
 
   const getFilteredTasks = () => {
     return tasks.filter(task => {
