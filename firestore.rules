@@ -1,0 +1,101 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    // --- 6. GÜNLÜK RAPORLAR ---
+    match /daily_reports/{reportId} {
+      // Yönetim tüm raporları görür, personel sadece kendi raporlarını görür
+      allow read: if isSignedIn() && (isManagement() || request.auth.uid == resource.data.userId);
+      // Her kullanıcı kendi raporunu oluşturabilir, yönetim herkes adına oluşturabilir
+      allow create: if isSignedIn() && (isManagement() || request.auth.uid == request.resource.data.userId);
+      // Sadece yönetim veya rapor sahibi güncelleyebilir/silebilir
+      allow update, delete: if isSignedIn() && (isManagement() || request.auth.uid == resource.data.userId);
+    }
+
+    // --- YARDIMCI FONKSİYONLAR ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function getUserData() {
+      return get(/databases/$(database)/documents/team_members/$(request.auth.uid)).data;
+    }
+    function isAdmin() {
+      return isSignedIn() && getUserData().role == 'Admin';
+    }
+    function isManagement() {
+      return isSignedIn() && getUserData().role in ['Admin', 'Manager', 'CEO', 'Director'];
+    }
+
+    // --- 1. EKİP ÜYELERİ ---
+    match /team_members/{userId} {
+      allow read: if isSignedIn();
+      allow create, delete: if isAdmin();
+      // Kullanıcı kendi dokümanında kritik alanları güncelleyemez
+      allow update: if isAdmin() || (
+        request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'role',
+          'permissions',
+          'salary',
+          'status',
+          'isActive',
+          'department',
+          'createdAt',
+          'uid'
+        ]) == false
+      );
+    }
+
+    // --- 2. AYARLAR ---
+    match /settings/{document=**} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    
+    // --- 3. GÖREVLER (TASKS) ---
+    match /tasks/{taskId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      // Silme yönetim yetkisi ile sınırlandı
+      allow delete: if isManagement();
+    }
+
+    // --- 4. BİLDİRİMLER ---
+    match /notifications/{notificationId} {
+      allow create: if isSignedIn();
+      allow read, update: if isSignedIn() && request.auth.uid == resource.data.recipientId;
+    }
+
+    // --- 5. SİPARİŞLER ---
+    match /orders/{orderId} {
+      allow read, create, update: if isSignedIn();
+      // Silme yönetim yetkisi ile sınırlandı
+      allow delete: if isManagement();
+    }
+
+    // --- 7. VARDİYALAR (GİRİŞ ÇIKIŞ) ---
+    match /shifts/{shiftId} {
+      // Yönetim tüm vardiyaları görür, personel sadece kendi vardiyalarını görür
+      allow read: if isSignedIn() && (isManagement() || request.auth.uid == resource.data.userId);
+      // Kişi sadece kendi girişini yapabilir (veya yönetim manuel ekleyebilir)
+      allow create: if isSignedIn() && (request.auth.uid == request.resource.data.userId || isManagement());
+      // Kişi sadece kendi kaydını güncelleyebilir (çıkış/mola) veya yönetim güncelleyebilir
+      allow update: if isSignedIn() && (request.auth.uid == resource.data.userId || isManagement());
+      // Sadece admin silebilir (minimum kırılma için korunuyor)
+      allow delete: if isAdmin();
+    }
+
+    // --- 8. İZİN YÖNETİMİ ---
+    match /leaves/{leaveId} {
+      // Yönetim tüm izinleri görür, personel sadece kendi izinlerini görür
+      allow read: if isSignedIn() && (isManagement() || request.auth.uid == resource.data.userId);
+      
+      // Personel sadece kendi adına izin talep edebilir (veya yönetim herkes için edebilir)
+      allow create: if isSignedIn() && (request.auth.uid == request.resource.data.userId || isManagement());
+      
+      // Yönetim durumu güncelleyebilir, kişi sadece kendi talebini güncelleyebilir/silebilir
+      allow update, delete: if isSignedIn() && (isManagement() || request.auth.uid == resource.data.userId);
+    }
+  }
+}
