@@ -74,13 +74,16 @@ const LeaveManager = () => {
     fetchDependencies();
 
     // 3. İzinleri Dinle
-    const unsubscribe = subscribeToLeaves((data) => {
-      setLeaves(data);
-      setLoading(false);
-    });
+    const unsubscribe = subscribeToLeaves(
+      (data) => {
+        setLeaves(data);
+        setLoading(false);
+      },
+      { uid: userData?.uid, isManagement: isManager }
+    );
     
     return () => unsubscribe();
-  }, []);
+  }, [userData, isManager]);
 
   // --- HESAPLAMALAR (KIDEM VE BAKİYE) ---
   

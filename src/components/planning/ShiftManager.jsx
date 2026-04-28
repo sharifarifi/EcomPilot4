@@ -72,15 +72,18 @@ const ShiftManager = () => {
 
         } catch(e) { console.error(e); }
 
-        const unsub = subscribeToShifts((data) => {
+        const unsub = subscribeToShifts(
+          (data) => {
             setShifts(data || []);
             setLoading(false);
-        });
+          },
+          { uid: userData?.uid, isManagement: isManager }
+        );
         return () => unsub();
     };
     fetchData();
     return () => clearInterval(timer);
-  }, []);
+  }, [userData, isManager]);
 
   useEffect(() => {
     const checkMyShift = async () => {
