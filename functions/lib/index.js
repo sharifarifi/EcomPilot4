@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.shopifyConnectionTest = exports.shopifyManualSync = exports.shopifyWebhookReceiver = exports.shopifyAuthCallback = exports.shopifyStartInstall = void 0;
+const https_1 = require("firebase-functions/v2/https");
+const authCallback_js_1 = require("./handlers/authCallback.js");
+const connectionTest_js_1 = require("./handlers/connectionTest.js");
+const manualSync_js_1 = require("./handlers/manualSync.js");
+const startInstall_js_1 = require("./handlers/startInstall.js");
+const webhookReceiver_js_1 = require("./handlers/webhookReceiver.js");
+exports.shopifyStartInstall = (0, https_1.onRequest)({ cors: true }, startInstall_js_1.startInstall);
+exports.shopifyAuthCallback = (0, https_1.onRequest)(authCallback_js_1.authCallback);
+exports.shopifyWebhookReceiver = (0, https_1.onRequest)({ cors: false }, webhookReceiver_js_1.webhookReceiver);
+exports.shopifyManualSync = (0, https_1.onRequest)(manualSync_js_1.manualSync);
+exports.shopifyConnectionTest = (0, https_1.onRequest)({ cors: true }, connectionTest_js_1.connectionTest);
