@@ -7,10 +7,13 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { subscribeToTasks, addTask, updateTaskStatus, addTaskComment, deleteTask } from '../../firebase/taskService';
 import { getAllTeamMembers, getDepartments } from '../../firebase/teamService';
+import { isManagementRole } from '../../constants/roles';
+import { TASK_STATUSES } from '../../constants/statuses';
 
 const TaskBoard = () => {
   const { userData } = useAuth();
-  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
+  const isManager = isManagementRole(userData?.role);
+  const TASK_UI_COLUMNS = [TASK_STATUSES.PENDING, TASK_STATUSES.IN_PROGRESS, TASK_STATUSES.COMPLETED];
 
   const [tasks, setTasks] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
@@ -145,11 +148,11 @@ const TaskBoard = () => {
 
       {/* KANBAN BOARD */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 overflow-x-auto pb-4 h-[calc(100vh-220px)]">
-        {['Bekliyor', 'Sürüyor', 'Tamamlandı'].map(status => (
+        {TASK_UI_COLUMNS.map(status => (
           <div key={status} className="flex flex-col h-full bg-slate-50/50 rounded-xl border border-slate-200">
              <div className="p-3 border-b border-slate-200 flex justify-between items-center bg-white rounded-t-xl sticky top-0 z-10 shadow-sm">
                 <span className="font-bold text-sm text-slate-700 flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${status === 'Tamamlandı' ? 'bg-green-500' : status === 'Sürüyor' ? 'bg-blue-500' : 'bg-orange-400'}`}></div> {status}
+                  <div className={`w-2 h-2 rounded-full ${status === TASK_STATUSES.COMPLETED ? 'bg-green-500' : status === TASK_STATUSES.IN_PROGRESS ? 'bg-blue-500' : 'bg-orange-400'}`}></div> {status}
                 </span>
                 <span className="bg-slate-100 text-xs font-bold px-2 py-0.5 rounded text-slate-600">{filteredTasks.filter(t => t.status === status).length}</span>
              </div>
@@ -160,8 +163,8 @@ const TaskBoard = () => {
                        <span className="text-[10px] font-bold text-slate-400 border px-1.5 py-0.5 rounded flex gap-1 items-center bg-slate-50 font-mono"><Hash size={10}/> {task.id.substring(0,6)}</span>
                        <div className="flex gap-1">
                          <button className="text-slate-400 hover:text-blue-600 p-1 bg-slate-50 rounded"><Eye size={14}/></button>
-                         {status !== 'Tamamlandı' && (isManager || task.assignee === userData?.uid) && (
-                             <button onClick={(e) => { e.stopPropagation(); handleChangeStatus(task.id, status === 'Bekliyor' ? 'Sürüyor' : 'Tamamlandı'); }} className="text-slate-400 hover:text-green-600 p-1 bg-slate-50 rounded"><PlayCircle size={14}/></button>
+                         {status !== TASK_STATUSES.COMPLETED && (isManager || task.assignee === userData?.uid) && (
+                             <button onClick={(e) => { e.stopPropagation(); handleChangeStatus(task.id, status === TASK_STATUSES.PENDING ? TASK_STATUSES.IN_PROGRESS : TASK_STATUSES.COMPLETED); }} className="text-slate-400 hover:text-green-600 p-1 bg-slate-50 rounded"><PlayCircle size={14}/></button>
                          )}
                          {isManager && (
                              <button onClick={(e) => handleDeleteTask(task.id, e)} className="text-slate-300 hover:text-red-500 p-1 bg-slate-50 rounded"><Trash2 size={14}/></button>

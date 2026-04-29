@@ -1,12 +1,7 @@
 import type { Request } from 'express';
 import { getAuth } from 'firebase-admin/auth';
 import { adminDb } from '../config/firebaseAdmin.js';
-
-// Shopify operasyon endpoint'leri için bilinçli olarak dar yetki seti:
-// CEO / DIRECTOR dahil değildir.
-const SHOPIFY_OPERATION_ROLES = new Set(['ADMIN', 'MANAGER']);
-
-const toUpperRole = (role: unknown) => String(role || '').trim().toUpperCase();
+import { SHOPIFY_OPERATION_ROLES, normalizeRole } from '../policies/rolePolicy.js';
 
 export class HttpError extends Error {
   status: number;
@@ -54,7 +49,7 @@ export const requireManagementAuth = async (req: Request) => {
     throw new HttpError(403, 'forbidden', 'User profile not found.');
   }
 
-  const role = toUpperRole(memberSnapshot.data()?.role);
+  const role = normalizeRole(memberSnapshot.data()?.role);
   if (!role) {
     console.warn('[authz] missing role in team_members profile', { uid });
     throw new HttpError(403, 'forbidden', 'Missing role.');

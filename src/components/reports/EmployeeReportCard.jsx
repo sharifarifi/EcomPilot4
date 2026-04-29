@@ -15,10 +15,11 @@ import { subscribeToTasks } from '../../firebase/taskService';
 import { subscribeToShifts } from '../../firebase/shiftService';
 import { subscribeToLeaves } from '../../firebase/leaveService';
 import { useAuth } from '../../context/AuthContext';
+import { isManagementRole } from '../../constants/roles';
 
 const EmployeeReportCard = ({ employee, onClose }) => {
   const { userData } = useAuth();
-  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
+  const isManager = isManagementRole(userData?.role);
   const [tasks, setTasks] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [leaves, setLeaves] = useState([]);

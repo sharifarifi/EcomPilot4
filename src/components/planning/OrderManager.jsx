@@ -6,6 +6,7 @@ import {
 
 // --- FIREBASE IMPORTLARI ---
 import { useAuth } from '../../context/AuthContext';
+import { isManagementRole } from '../../constants/roles';
 import { subscribeToOrders, addOrder, updateOrder, updateOrderStatus } from '../../firebase/orderService';
 
 // Şehir Verisi (Dosya yolu sizde farklı olabilir, kontrol edin!)
@@ -42,7 +43,7 @@ const OrderManager = () => {
 
   // --- VERİ ÇEKME ---
   useEffect(() => {
-    const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
+    const isManager = isManagementRole(userData?.role);
     const fallbackTimer = setTimeout(() => setLoading(false), 1500);
 
     const unsubscribe = subscribeToOrders(

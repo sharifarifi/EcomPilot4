@@ -8,6 +8,7 @@ import {
 
 // --- FIREBASE ENTEGRASYONU ---
 import { useAuth } from '../../context/AuthContext';
+import { isManagementRole } from '../../constants/roles';
 import { subscribeToLeaves, addLeaveRequest, updateLeaveStatus, updateLeave, deleteLeaveRequest } from '../../firebase/leaveService';
 import { getAllTeamMembers } from '../../firebase/teamService';
 import { collection, getDocs } from 'firebase/firestore'; 
@@ -15,7 +16,7 @@ import { db } from '../../firebase/firebaseConfig';
 
 const LeaveManager = () => {
   const { userData } = useAuth();
-  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
+  const isManager = isManagementRole(userData?.role);
 
   // --- BİLDİRİM SİSTEMİ ---
   const [toasts, setToasts] = useState([]);

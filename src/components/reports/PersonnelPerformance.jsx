@@ -15,6 +15,7 @@ import { subscribeToTasks } from '../../firebase/taskService';
 import { subscribeToShifts } from '../../firebase/shiftService';
 import { subscribeToLeaves } from '../../firebase/leaveService';
 import { useAuth } from '../../context/AuthContext';
+import { isManagementRole } from '../../constants/roles';
 
 // YENİ EKLEDİĞİMİZ BİLEŞENİ İÇE AKTARIYORUZ
 import EmployeeReportCard from './EmployeeReportCard';
@@ -32,7 +33,7 @@ const DEMO_EMPLOYEES = [
 
 const PersonnelPerformance = () => {
   const { userData } = useAuth();
-  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
+  const isManager = isManagementRole(userData?.role);
   const [loading, setLoading] = useState(true);
   const [teamMembers, setTeamMembers] = useState([]);
   const [departments, setDepartments] = useState([]);

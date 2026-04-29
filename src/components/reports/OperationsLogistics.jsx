@@ -13,6 +13,7 @@ import {
 // --- FIREBASE SERVİSİ ---
 import { subscribeToTasks } from '../../firebase/taskService';
 import { useAuth } from '../../context/AuthContext';
+import { isManagementRole } from '../../constants/roles';
 
 // --- DEMO / YEDEK VERİLER ---
 const BASE_CARGO = [
@@ -84,7 +85,7 @@ const OperationsTooltip = ({ active, payload, label }) => {
 
 const OperationsLogistics = () => {
   const { userData } = useAuth();
-  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
+  const isManager = isManagementRole(userData?.role);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   

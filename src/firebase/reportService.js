@@ -9,6 +9,7 @@ import {
   updateDocument
 } from './serviceCore';
 import { normalizeReportStatus } from '../utils/reportEditUtils';
+import { REPORT_STATUSES } from '../constants/statuses';
 
 const SERVICE_NAME = 'reportService';
 const REPORTS_COLLECTION = FIRESTORE_PATHS.dailyReports;
@@ -16,7 +17,7 @@ const REPORTS_COLLECTION = FIRESTORE_PATHS.dailyReports;
 const deriveReportStatusFromTasks = (tasks) => {
   if (!Array.isArray(tasks) || !tasks.length) return null;
   const allCompleted = tasks.every((task) => normalizeReportStatus(task?.status) === 'completed');
-  return allCompleted ? 'Tamamlandı' : 'Devam Ediyor';
+  return allCompleted ? REPORT_STATUSES.COMPLETED : REPORT_STATUSES.IN_PROGRESS;
 };
 
 const mapReportSnapshot = (document) => {

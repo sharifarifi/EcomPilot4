@@ -8,6 +8,7 @@ import {
 
 // FIREBASE
 import { useAuth } from '../../context/AuthContext';
+import { isManagementRole } from '../../constants/roles';
 import { subscribeToShifts, getTodayShiftByUser, checkIn, updateShift } from '../../firebase/shiftService';
 import { getDepartments } from '../../firebase/teamService';
 import { collection, getDocs } from 'firebase/firestore'; 
@@ -15,7 +16,7 @@ import { db } from '../../firebase/firebaseConfig';
 
 const ShiftManager = () => {
   const { userData } = useAuth();
-  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
+  const isManager = isManagementRole(userData?.role);
 
   // --- DİNAMİK OPERASYON AYARLARI ---
   const [opSettings, setOpSettings] = useState({

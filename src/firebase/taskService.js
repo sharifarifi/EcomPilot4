@@ -1,5 +1,6 @@
 import { query, orderBy, serverTimestamp, arrayUnion, where } from 'firebase/firestore';
 import { sendNotification } from './notificationService';
+import { TASK_STATUSES } from '../constants/statuses';
 import {
   FIRESTORE_PATHS,
   collectionRef,
@@ -44,7 +45,7 @@ export const addTask = async (taskData) => {
     TASKS_COLLECTION,
     {
       ...taskData,
-      status: 'Bekliyor',
+      status: TASK_STATUSES.PENDING,
       createdAt: serverTimestamp(),
       comments: [createSystemLogEntry('İş emri oluşturuldu.')]
     },

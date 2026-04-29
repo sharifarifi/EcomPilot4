@@ -7,6 +7,7 @@ import {
   subscribeToQuery,
   updateDocument
 } from './serviceCore';
+import { ORDER_STATUSES } from '../constants/statuses';
 
 const SERVICE_NAME = 'orderService';
 const ORDERS_COLLECTION = FIRESTORE_PATHS.orders;
@@ -51,7 +52,7 @@ export const addOrder = async (orderData) => {
     ORDERS_COLLECTION,
     {
       ...orderData,
-      status: 'Onaylandı',
+      status: ORDER_STATUSES.APPROVED,
       createdAt: serverTimestamp()
     },
     'addOrder'
