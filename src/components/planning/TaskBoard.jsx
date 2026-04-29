@@ -10,7 +10,7 @@ import { getAllTeamMembers, getDepartments } from '../../firebase/teamService';
 
 const TaskBoard = () => {
   const { userData } = useAuth();
-  const isManager = ['Admin', 'Manager', 'CEO', 'Director'].includes(userData?.role);
+  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
 
   const [tasks, setTasks] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);

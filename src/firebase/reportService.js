@@ -31,13 +31,18 @@ const mapReportSnapshot = (document) => {
 
 export const subscribeToReports = (callback, options = {}) => {
   const { uid, isManagement = false } = options;
-  const reportsQuery = (!isManagement && uid)
-    ? query(
+  if (!isManagement && !uid) {
+    callback([]);
+    return () => {};
+  }
+
+  const reportsQuery = isManagement
+    ? query(collectionRef(REPORTS_COLLECTION), orderBy('date', 'desc'))
+    : query(
         collectionRef(REPORTS_COLLECTION),
         where('userId', '==', uid),
         orderBy('date', 'desc')
-      )
-    : query(collectionRef(REPORTS_COLLECTION), orderBy('date', 'desc'));
+      );
 
   return subscribeToQuery(SERVICE_NAME, 'subscribeToReports', reportsQuery, callback, mapReportSnapshot);
 };

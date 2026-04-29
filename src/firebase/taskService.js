@@ -22,13 +22,18 @@ const createSystemLogEntry = (text) => ({
 
 export const subscribeToTasks = (callback, options = {}) => {
   const { uid, isManagement = false } = options;
-  const tasksQuery = (!isManagement && uid)
-    ? query(
+  if (!isManagement && !uid) {
+    callback([]);
+    return () => {};
+  }
+
+  const tasksQuery = isManagement
+    ? query(collectionRef(TASKS_COLLECTION), orderBy('createdAt', 'desc'))
+    : query(
         collectionRef(TASKS_COLLECTION),
         where('assignee', '==', uid),
         orderBy('createdAt', 'desc')
-      )
-    : query(collectionRef(TASKS_COLLECTION), orderBy('createdAt', 'desc'));
+      );
 
   return subscribeToQuery(SERVICE_NAME, 'subscribeToTasks', tasksQuery, callback);
 };

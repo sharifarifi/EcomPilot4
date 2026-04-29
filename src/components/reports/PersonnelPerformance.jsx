@@ -32,7 +32,7 @@ const DEMO_EMPLOYEES = [
 
 const PersonnelPerformance = () => {
   const { userData } = useAuth();
-  const isManager = ['Admin', 'Manager', 'CEO', 'Director'].includes(userData?.role);
+  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
   const [loading, setLoading] = useState(true);
   const [teamMembers, setTeamMembers] = useState([]);
   const [departments, setDepartments] = useState([]);

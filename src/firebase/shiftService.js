@@ -10,20 +10,25 @@ const SHIFT_UPDATE_ALLOWED_FIELDS = ['checkOut', 'status', 'breaks', 'note', 'up
 // --- VARDİYALARI DİNLE (Gerçek Zamanlı) ---
 export const subscribeToShifts = (callback, options = {}) => {
   const { uid, isManagement = false } = options;
+  if (!isManagement && !uid) {
+    callback([]);
+    return () => {};
+  }
+
   // Sadece son 30 günlük veriyi getir (Performans için)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const dateString = thirtyDaysAgo.toISOString().split('T')[0];
 
-  const q = (!isManagement && uid)
+  const q = isManagement
     ? query(
-        collection(db, SHIFTS_COLLECTION),
-        where("userId", "==", uid),
+        collection(db, SHIFTS_COLLECTION), 
         where("date", ">=", dateString),
         orderBy("date", "desc")
       )
     : query(
-        collection(db, SHIFTS_COLLECTION), 
+        collection(db, SHIFTS_COLLECTION),
+        where("userId", "==", uid),
         where("date", ">=", dateString),
         orderBy("date", "desc")
       );

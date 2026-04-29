@@ -18,7 +18,7 @@ import {
 
 const WorkReport = () => {
   const { userData } = useAuth();
-  const isManager = ['Admin', 'Manager', 'CEO', 'Director'].includes(userData?.role);
+  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
 
   // --- STATE ---
   const [dailyReports, setDailyReports] = useState([]);

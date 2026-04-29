@@ -15,7 +15,7 @@ import { db } from '../../firebase/firebaseConfig';
 
 const LeaveManager = () => {
   const { userData } = useAuth();
-  const isManager = ['Admin', 'Manager', 'CEO', 'Director'].includes(userData?.role);
+  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
 
   // --- BİLDİRİM SİSTEMİ ---
   const [toasts, setToasts] = useState([]);

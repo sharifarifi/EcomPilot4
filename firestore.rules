@@ -21,10 +21,13 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/team_members/$(request.auth.uid)).data;
     }
     function isAdmin() {
-      return isSignedIn() && getUserData().role == 'Admin';
+      return isSignedIn() && getUserData().role in ['Admin', 'ADMIN'];
     }
     function isManagement() {
-      return isSignedIn() && getUserData().role in ['Admin', 'Manager', 'CEO', 'Director'];
+      return isSignedIn() && getUserData().role in [
+        'Admin', 'Manager', 'CEO', 'Director',
+        'ADMIN', 'MANAGER', 'DIRECTOR'
+      ];
     }
 
     // --- 1. EKİP ÜYELERİ ---

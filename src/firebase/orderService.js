@@ -29,13 +29,18 @@ const ORDER_EDITABLE_FIELDS = [
 
 export const subscribeToOrders = (callback, options = {}) => {
   const { uid, isManagement = false } = options;
-  const ordersQuery = (!isManagement && uid)
-    ? query(
+  if (!isManagement && !uid) {
+    callback([]);
+    return () => {};
+  }
+
+  const ordersQuery = isManagement
+    ? query(collectionRef(ORDERS_COLLECTION), orderBy('createdAt', 'desc'))
+    : query(
         collectionRef(ORDERS_COLLECTION),
         where('userId', '==', uid),
         orderBy('createdAt', 'desc')
-      )
-    : query(collectionRef(ORDERS_COLLECTION), orderBy('createdAt', 'desc'));
+      );
 
   return subscribeToQuery(SERVICE_NAME, 'subscribeToOrders', ordersQuery, callback);
 };

@@ -42,7 +42,7 @@ const OrderManager = () => {
 
   // --- VERİ ÇEKME ---
   useEffect(() => {
-    const isManager = ['Admin', 'Manager', 'CEO', 'Director'].includes(userData?.role);
+    const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
     const unsubscribe = subscribeToOrders(
       (data) => {
         setOrders(data);

@@ -84,7 +84,7 @@ const OperationsTooltip = ({ active, payload, label }) => {
 
 const OperationsLogistics = () => {
   const { userData } = useAuth();
-  const isManager = ['Admin', 'Manager', 'CEO', 'Director'].includes(userData?.role);
+  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   

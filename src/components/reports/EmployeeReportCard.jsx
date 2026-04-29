@@ -18,7 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 
 const EmployeeReportCard = ({ employee, onClose }) => {
   const { userData } = useAuth();
-  const isManager = ['Admin', 'Manager', 'CEO', 'Director'].includes(userData?.role);
+  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
   const [tasks, setTasks] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [leaves, setLeaves] = useState([]);

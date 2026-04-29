@@ -10,13 +10,18 @@ const LEAVE_EDITABLE_FIELDS = ['type', 'start', 'end', 'days', 'reason', 'note']
 // --- İZİNLERİ DİNLE ---
 export const subscribeToLeaves = (callback, options = {}) => {
   const { uid, isManagement = false } = options;
-  const q = (!isManagement && uid)
-    ? query(
+  if (!isManagement && !uid) {
+    callback([]);
+    return () => {};
+  }
+
+  const q = isManagement
+    ? query(collection(db, LEAVES_COLLECTION), orderBy("createdAt", "desc"))
+    : query(
         collection(db, LEAVES_COLLECTION),
         where("userId", "==", uid),
         orderBy("createdAt", "desc")
-      )
-    : query(collection(db, LEAVES_COLLECTION), orderBy("createdAt", "desc"));
+      );
 
   return onSnapshot(q, (snapshot) => {
     const leaves = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
