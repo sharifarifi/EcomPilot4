@@ -42,12 +42,16 @@ const OrderManager = () => {
 
   // --- VERİ ÇEKME ---
   useEffect(() => {
-    const unsubscribe = subscribeToOrders((data) => {
-      setOrders(data);
-      setLoading(false);
-    });
+    const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
+    const unsubscribe = subscribeToOrders(
+      (data) => {
+        setOrders(data);
+        setLoading(false);
+      },
+      { uid: userData?.uid, isManagement: isManager }
+    );
     return () => unsubscribe();
-  }, []);
+  }, [userData]);
 
   // --- FİLTRELEME ---
   const filteredProducts = useMemo(() => {
@@ -137,6 +141,7 @@ const OrderManager = () => {
         payment: newOrder.payment,
         items: newOrder.items,
         total: totalAmount,
+        userId: userData?.uid || '',
         taker: userData?.name || 'Sistem',
         date: new Date().toISOString().split('T')[0] // Sadece görüntüleme için tarih stringi
     };
