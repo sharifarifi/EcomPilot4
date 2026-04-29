@@ -1,20 +1,34 @@
 import type { Request, Response } from 'express';
+import { adminDb } from '../config/firebaseAdmin.js';
 import { createShopifyAdminClient, testShopConnection } from '../shopify/shopifyClient.js';
+import { HttpError, requireManagementAuth } from './_authz.js';
+import { getValidatedShopDomain } from './_validation.js';
 
 export const connectionTest = async (req: Request, res: Response) => {
-  const shopDomain = String(req.query.shop || req.body?.shop || '').trim();
-  const accessToken = typeof req.body?.accessToken === 'string' ? req.body.accessToken : undefined;
+  try {
+    await requireManagementAuth(req);
+    const shopDomain = getValidatedShopDomain(req);
 
-  if (!shopDomain) {
-    res.status(400).json({ error: 'Missing shop domain.' });
-    return;
+    // Güvenlik gereği accessToken client body'den alınmaz.
+    // Eğer ileride güvenli token saklama eklenecekse buradan okunmalıdır.
+    const storeSnapshot = await adminDb.collection('shopify_stores').doc(shopDomain).get();
+    const storeData = storeSnapshot.exists ? storeSnapshot.data() : null;
+    const persistedAccessToken = typeof storeData?.accessToken === 'string' ? storeData.accessToken : undefined;
+
+    const client = createShopifyAdminClient(shopDomain, persistedAccessToken);
+    const result = await testShopConnection(client);
+
+    res.status(200).json({
+      shopDomain,
+      ok: result.ok,
+      message: result.ok ? 'connection_ok' : 'connection_check_failed'
+    });
+  } catch (error) {
+    if (error instanceof HttpError) {
+      res.status(error.status).json({ error: error.code });
+      return;
+    }
+
+    res.status(502).json({ error: 'upstream_error' });
   }
-
-  const client = createShopifyAdminClient(shopDomain, accessToken);
-  const result = await testShopConnection(client);
-
-  res.status(200).json({
-    shopDomain,
-    ...result
-  });
 };
