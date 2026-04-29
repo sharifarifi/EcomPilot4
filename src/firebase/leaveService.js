@@ -1,14 +1,28 @@
 import { db } from "./firebaseConfig";
 import { 
   collection, addDoc, updateDoc, deleteDoc, doc, 
-  onSnapshot, query, orderBy, serverTimestamp 
+  onSnapshot, query, orderBy, serverTimestamp, where 
 } from "firebase/firestore";
 
 const LEAVES_COLLECTION = "leaves";
+const LEAVE_EDITABLE_FIELDS = ['type', 'start', 'end', 'days', 'reason', 'note'];
 
 // --- İZİNLERİ DİNLE ---
-export const subscribeToLeaves = (callback) => {
-  const q = query(collection(db, LEAVES_COLLECTION), orderBy("createdAt", "desc"));
+export const subscribeToLeaves = (callback, options = {}) => {
+  const { uid, isManagement = false } = options;
+  if (!isManagement && !uid) {
+    callback([]);
+    return () => {};
+  }
+
+  const q = isManagement
+    ? query(collection(db, LEAVES_COLLECTION), orderBy("createdAt", "desc"))
+    : query(
+        collection(db, LEAVES_COLLECTION),
+        where("userId", "==", uid),
+        orderBy("createdAt", "desc")
+      );
+
   return onSnapshot(q, (snapshot) => {
     const leaves = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(leaves);
@@ -45,7 +59,12 @@ export const updateLeaveStatus = async (leaveId, newStatus) => {
 export const updateLeave = async (leaveId, updatedData) => {
   try {
     const leaveRef = doc(db, LEAVES_COLLECTION, leaveId);
-    await updateDoc(leaveRef, updatedData);
+    const payload = Object.fromEntries(
+      Object.entries(updatedData || {}).filter(([key, value]) => (
+        LEAVE_EDITABLE_FIELDS.includes(key) && value !== undefined
+      ))
+    );
+    await updateDoc(leaveRef, payload);
   } catch (error) {
     console.error("İzin güncellenemedi:", error);
     throw error;

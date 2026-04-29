@@ -1,4 +1,4 @@
-import { query, orderBy, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { query, orderBy, serverTimestamp, arrayUnion, where } from 'firebase/firestore';
 import { sendNotification } from './notificationService';
 import {
   FIRESTORE_PATHS,
@@ -20,8 +20,21 @@ const createSystemLogEntry = (text) => ({
   time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
 });
 
-export const subscribeToTasks = (callback) => {
-  const tasksQuery = query(collectionRef(TASKS_COLLECTION), orderBy('createdAt', 'desc'));
+export const subscribeToTasks = (callback, options = {}) => {
+  const { uid, isManagement = false } = options;
+  if (!isManagement && !uid) {
+    callback([]);
+    return () => {};
+  }
+
+  const tasksQuery = isManagement
+    ? query(collectionRef(TASKS_COLLECTION), orderBy('createdAt', 'desc'))
+    : query(
+        collectionRef(TASKS_COLLECTION),
+        where('assignee', '==', uid),
+        orderBy('createdAt', 'desc')
+      );
+
   return subscribeToQuery(SERVICE_NAME, 'subscribeToTasks', tasksQuery, callback);
 };
 

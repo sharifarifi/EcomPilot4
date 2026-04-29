@@ -15,7 +15,7 @@ import { db } from '../../firebase/firebaseConfig';
 
 const LeaveManager = () => {
   const { userData } = useAuth();
-  const isManager = ['Admin', 'Manager', 'CEO', 'Director'].includes(userData?.role);
+  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
 
   // --- BİLDİRİM SİSTEMİ ---
   const [toasts, setToasts] = useState([]);
@@ -45,6 +45,8 @@ const LeaveManager = () => {
 
   // --- VERİ ÇEKME & ENTEGRASYON ---
   useEffect(() => {
+    const loadingFallbackTimer = setTimeout(() => setLoading(false), 2000);
+
     const fetchDependencies = async () => {
       try {
         // 1. Ekip Üyelerini Çek (İşe Başlama Tarihi için)
@@ -74,13 +76,19 @@ const LeaveManager = () => {
     fetchDependencies();
 
     // 3. İzinleri Dinle
-    const unsubscribe = subscribeToLeaves((data) => {
-      setLeaves(data);
-      setLoading(false);
-    });
+    const unsubscribe = subscribeToLeaves(
+      (data) => {
+        setLeaves(data);
+        setLoading(false);
+      },
+      { uid: userData?.uid, isManagement: isManager }
+    );
     
-    return () => unsubscribe();
-  }, []);
+    return () => {
+      clearTimeout(loadingFallbackTimer);
+      unsubscribe();
+    };
+  }, [userData, isManager]);
 
   // --- HESAPLAMALAR (KIDEM VE BAKİYE) ---
   
