@@ -15,7 +15,7 @@ import { db } from '../../firebase/firebaseConfig';
 
 const ShiftManager = () => {
   const { userData } = useAuth();
-  const isManager = ['Admin', 'Manager', 'CEO', 'Director'].includes(userData?.role);
+  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
 
   // --- DİNAMİK OPERASYON AYARLARI ---
   const [opSettings, setOpSettings] = useState({
@@ -52,6 +52,7 @@ const ShiftManager = () => {
   // --- VERİ YÜKLEME ---
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const loadingFallbackTimer = setTimeout(() => setLoading(false), 2000);
     
     const fetchData = async () => {
         try {
@@ -72,15 +73,21 @@ const ShiftManager = () => {
 
         } catch(e) { console.error(e); }
 
-        const unsub = subscribeToShifts((data) => {
+        const unsub = subscribeToShifts(
+          (data) => {
             setShifts(data || []);
             setLoading(false);
-        });
+          },
+          { uid: userData?.uid, isManagement: isManager }
+        );
         return () => unsub();
     };
     fetchData();
-    return () => clearInterval(timer);
-  }, []);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(loadingFallbackTimer);
+    };
+  }, [userData, isManager]);
 
   useEffect(() => {
     const checkMyShift = async () => {

@@ -14,6 +14,7 @@ import { getAllTeamMembers, getDepartments } from '../../firebase/teamService';
 import { subscribeToTasks } from '../../firebase/taskService';
 import { subscribeToShifts } from '../../firebase/shiftService';
 import { subscribeToLeaves } from '../../firebase/leaveService';
+import { useAuth } from '../../context/AuthContext';
 
 // YENİ EKLEDİĞİMİZ BİLEŞENİ İÇE AKTARIYORUZ
 import EmployeeReportCard from './EmployeeReportCard';
@@ -30,6 +31,8 @@ const DEMO_EMPLOYEES = [
 ];
 
 const PersonnelPerformance = () => {
+  const { userData } = useAuth();
+  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
   const [loading, setLoading] = useState(true);
   const [teamMembers, setTeamMembers] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -53,13 +56,14 @@ const PersonnelPerformance = () => {
     };
     fetchData();
 
-    const unsubTasks = subscribeToTasks(setTasks);
-    const unsubShifts = subscribeToShifts(setShifts);
-    const unsubLeaves = subscribeToLeaves(setLeaves);
+    const queryScope = { uid: userData?.uid, isManagement: isManager };
+    const unsubTasks = subscribeToTasks(setTasks, queryScope);
+    const unsubShifts = subscribeToShifts(setShifts, queryScope);
+    const unsubLeaves = subscribeToLeaves(setLeaves, queryScope);
 
     setTimeout(() => setLoading(false), 800);
     return () => { unsubTasks(); unsubShifts(); unsubLeaves(); };
-  }, []);
+  }, [userData, isManager]);
 
   const dateLimits = useMemo(() => {
     const today = new Date(); let start = new Date(); let end = new Date();

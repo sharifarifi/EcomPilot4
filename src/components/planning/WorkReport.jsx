@@ -18,7 +18,7 @@ import {
 
 const WorkReport = () => {
   const { userData } = useAuth();
-  const isManager = ['Admin', 'Manager', 'CEO', 'Director'].includes(userData?.role);
+  const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
 
   // --- STATE ---
   const [dailyReports, setDailyReports] = useState([]);
@@ -54,21 +54,30 @@ const WorkReport = () => {
 
   // --- VERİ ÇEKME ---
   useEffect(() => {
+    const loadingFallbackTimer = setTimeout(() => setLoading(false), 2000);
+
     const fetchData = async () => {
         try {
             const depts = await getDepartments();
             setDepartments(depts || []);
         } catch(e) { console.error(e); }
         
-        const unsub1 = subscribeToReports(setDailyReports);
-        const unsub2 = subscribeToTasks((data) => {
+        const unsub1 = subscribeToReports(
+          setDailyReports,
+          { uid: userData?.uid, isManagement: isManager }
+        );
+        const unsub2 = subscribeToTasks(
+          (data) => {
             setSystemTasks(data);
             setLoading(false);
-        });
+          },
+          { uid: userData?.uid, isManagement: isManager }
+        );
         return () => { unsub1(); unsub2(); };
     };
     fetchData();
-  }, []);
+    return () => clearTimeout(loadingFallbackTimer);
+  }, [userData, isManager]);
 
   // --- VERİ BİRLEŞTİRME & İŞLEME ---
   const processedReports = useMemo(() => {
