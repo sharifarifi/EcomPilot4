@@ -1,4 +1,4 @@
-import { query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { query, orderBy, serverTimestamp, where } from 'firebase/firestore';
 import {
   FIRESTORE_PATHS,
   collectionRef,
@@ -10,9 +10,38 @@ import {
 
 const SERVICE_NAME = 'orderService';
 const ORDERS_COLLECTION = FIRESTORE_PATHS.orders;
+const ORDER_EDITABLE_FIELDS = [
+  'customer',
+  'phone',
+  'city',
+  'district',
+  'fullAddress',
+  'payment',
+  'items',
+  'total',
+  'taker',
+  'date',
+  'userId',
+  'status',
+  'shippingStatus',
+  'note'
+];
 
-export const subscribeToOrders = (callback) => {
-  const ordersQuery = query(collectionRef(ORDERS_COLLECTION), orderBy('createdAt', 'desc'));
+export const subscribeToOrders = (callback, options = {}) => {
+  const { uid, isManagement = false } = options;
+  if (!isManagement && !uid) {
+    callback([]);
+    return () => {};
+  }
+
+  const ordersQuery = isManagement
+    ? query(collectionRef(ORDERS_COLLECTION), orderBy('createdAt', 'desc'))
+    : query(
+        collectionRef(ORDERS_COLLECTION),
+        where('userId', '==', uid),
+        orderBy('createdAt', 'desc')
+      );
+
   return subscribeToQuery(SERVICE_NAME, 'subscribeToOrders', ordersQuery, callback);
 };
 
@@ -30,7 +59,13 @@ export const addOrder = async (orderData) => {
 };
 
 export const updateOrder = async (orderId, updatedData) => {
-  await updateDocument(SERVICE_NAME, ORDERS_COLLECTION, orderId, updatedData, 'updateOrder');
+  const payload = Object.fromEntries(
+    Object.entries(updatedData || {}).filter(([key, value]) => (
+      ORDER_EDITABLE_FIELDS.includes(key) && value !== undefined
+    ))
+  );
+
+  await updateDocument(SERVICE_NAME, ORDERS_COLLECTION, orderId, payload, 'updateOrder');
 };
 
 export const updateOrderStatus = async (orderId, newStatus) => {

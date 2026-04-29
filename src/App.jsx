@@ -71,7 +71,7 @@ const MainApp = () => {
   // --- YETKİ KONTROLÜ ---
   const hasPerm = (permId) => {
     if (!userData) return false;
-    if (['Admin', 'Manager', 'CEO', 'Director'].includes(userData.role)) return true; 
+    if (['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData.role || '').toUpperCase())) return true; 
     
     const userPermissions = Array.isArray(userData.permissions) ? userData.permissions : [];
     return userPermissions.includes(permId);

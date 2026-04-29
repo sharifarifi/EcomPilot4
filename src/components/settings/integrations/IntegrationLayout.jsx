@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 
 import { saveIntegration, subscribeToIntegrations } from '../../../firebase/integrationSettingsService';
-import { buildShopifyStartInstallUrl, normalizeShopDomain, shopifyConfig } from '../../../config/shopify';
+import { auth } from '../../../firebase/firebaseConfig';
+import { buildShopifyFunctionUrl, buildShopifyStartInstallUrl, normalizeShopDomain, shopifyConfig } from '../../../config/shopify';
 import ShopifyInstallButton from '../../integrations/ShopifyInstallButton';
 import EcommerceApps from './EcommerceApps';
 import MarketplaceApps from './MarketplaceApps';
@@ -313,11 +314,85 @@ const IntegrationLayout = () => {
     }));
   };
 
-  const handleShopifyAction = (actionLabel) => {
+  const endpointMap = {
+    'Refresh Connection': 'shopifyConnectionTest',
+    'Start Initial Sync': 'shopifyManualSync',
+    'Sync Orders': 'shopifyManualSync',
+    'Sync Products': 'shopifyManualSync',
+  };
+
+  const getUserFriendlyError = (statusCode) => {
+    switch (statusCode) {
+      case 401: return 'Oturum doğrulanamadı. Lütfen tekrar giriş yapın.';
+      case 403: return 'Bu işlem için Admin/Manager yetkisi gerekir.';
+      case 400: return 'Geçersiz mağaza alan adı. Lütfen .myshopify.com formatı kullanın.';
+      case 502: return 'Shopify servisinde geçici bir sorun var. Lütfen daha sonra tekrar deneyin.';
+      default: return 'İşlem sırasında beklenmeyen bir hata oluştu.';
+    }
+  };
+
+  const getUserFriendlyErrorByCode = (code) => {
+    if (code === 'missing_connection_token') {
+      return 'Shopify bağlantı tokenı bulunamadı. Entegrasyonu yeniden bağlayın.';
+    }
+
+    return null;
+  };
+
+  const handleShopifyAction = async (actionLabel) => {
     if (!selectedApp || !isShopifyApp(selectedApp)) return;
 
-    appendLocalLog(`${actionLabel} isteği sıraya alındı (backend bekleniyor).`);
-    showToast(`${actionLabel} henüz backend entegrasyonu gerektiriyor.`, 'error');
+    const endpoint = endpointMap[actionLabel];
+    const shopDomain = normalizeShopDomain(selectedApp.fields?.shopUrl || shopifyConfig.defaultShopDomain);
+
+    if (!endpoint) {
+      showToast('Bu aksiyon henüz endpoint ile eşleşmiyor.', 'error');
+      return;
+    }
+
+    if (!shopDomain) {
+      showToast('Önce geçerli bir .myshopify.com mağaza domaini girin.', 'error');
+      return;
+    }
+
+    if (!auth?.currentUser) {
+      showToast(getUserFriendlyError(401), 'error');
+      return;
+    }
+
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch(`${buildShopifyFunctionUrl(endpoint)}?shop=${encodeURIComponent(shopDomain)}`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        const codeBasedMessage = getUserFriendlyErrorByCode(errorPayload?.error || errorPayload?.code);
+        appendLocalLog(`${actionLabel} başarısız (${response.status})`, 'error');
+        showToast(codeBasedMessage || getUserFriendlyError(response.status), 'error');
+        return;
+      }
+
+      const successPayload = await response.json().catch(() => ({}));
+      const softWarningMessage = getUserFriendlyErrorByCode(successPayload?.code);
+      if (softWarningMessage) {
+        appendLocalLog(`${actionLabel} uyarı: ${successPayload.code}`, 'error');
+        showToast(softWarningMessage, 'error');
+        return;
+      }
+
+      appendLocalLog(`${actionLabel} başarılı (${shopDomain})`);
+      showToast(`${actionLabel} işlemi başlatıldı.`);
+    } catch (error) {
+      appendLocalLog(`${actionLabel} ağ hatası`, 'error');
+      showToast(error instanceof Error ? error.message : 'Ağ hatası oluştu.', 'error');
+    }
   };
 
   const handleShopifyInstallRequest = async ({ startInstallUrl, shopDomain }) => {

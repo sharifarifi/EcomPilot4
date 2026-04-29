@@ -50,6 +50,8 @@ const buildFunctionsUrl = (path) => {
   return `${baseUrl}/${path.replace(/^\//, '')}`;
 };
 
+export const buildShopifyFunctionUrl = (path) => buildFunctionsUrl(path);
+
 export const shopifyConfig = {
   defaultShopDomain: normalizeShopDomain(import.meta.env.VITE_SHOPIFY_STORE_DOMAIN || ''),
   appOrigin: getOrigin(),

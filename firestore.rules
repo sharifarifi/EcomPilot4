@@ -1,0 +1,203 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- YARDIMCI FONKSİYONLAR ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function getUserData() {
+      return get(/databases/$(database)/documents/team_members/$(request.auth.uid)).data;
+    }
+    function isAdmin() {
+      return isSignedIn() && getUserData().role in ['Admin', 'ADMIN'];
+    }
+    function isManagement() {
+      return isSignedIn() && getUserData().role in [
+        'Admin', 'Manager', 'CEO', 'Director',
+        'ADMIN', 'MANAGER', 'DIRECTOR'
+      ];
+    }
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+    function isDateString(value) {
+      return value is string && value.matches('^\\d{4}-\\d{2}-\\d{2}$');
+    }
+    function isTimeString(value) {
+      return value is string && value.matches('^([01]\\d|2[0-3]):[0-5]\\d$');
+    }
+    function isNonEmptyString(value, maxLen) {
+      return value is string && value.size() > 0 && value.size() <= maxLen;
+    }
+    function isValidStatus(value, allowed) {
+      return value is string && value in allowed;
+    }
+    function isNonNegativeNumber(value, maxVal) {
+      return value is int && value >= 0 && value <= maxVal
+        || value is float && value >= 0 && value <= maxVal;
+    }
+    function isBool(value) {
+      return value is bool;
+    }
+
+    // --- 1. EKİP ÜYELERİ ---
+    match /team_members/{userId} {
+      allow read: if isSignedIn() && (isManagement() || isSelf(userId));
+      allow create: if isAdmin()
+        && request.resource.data.uid == userId
+        && request.resource.data.email is string
+        && request.resource.data.role is string
+        && request.resource.data.permissions is list;
+      allow delete: if isAdmin();
+      // Kullanıcı kendi dokümanında kritik alanları güncelleyemez
+      allow update: if isAdmin() || (
+        isSelf(userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'role',
+          'permissions',
+          'salary',
+          'status',
+          'isActive',
+          'department',
+          'createdAt',
+          'uid'
+        ]) == false
+      );
+    }
+
+    // --- 2. AYARLAR ---
+    // Departman listesi uygulama genelinde okunabilir.
+    match /settings/departments {
+      allow read: if isSignedIn();
+      allow write: if isManagement()
+        && request.resource.data.list is list
+        && request.resource.data.list.size() <= 50;
+    }
+    // Diğer ayarlar yalnız yönetim.
+    match /settings/{document} {
+      allow read, write: if isManagement();
+    }
+    
+    // --- 3. GÖREVLER (TASKS) ---
+    match /tasks/{taskId} {
+      allow read: if isSignedIn()
+        && (isManagement() || isSelf(resource.data.assignee));
+      allow create: if isSignedIn()
+        && (isManagement() || isSelf(request.resource.data.assignee))
+        && isNonEmptyString(request.resource.data.title, 200)
+        && isValidStatus(request.resource.data.status, ['Bekliyor', 'Devam Ediyor', 'Tamamlandı', 'İptal'])
+        && request.resource.data.assignee is string
+        && isDateString(request.resource.data.dueDate);
+      allow update: if isSignedIn()
+        && (isManagement() || isSelf(resource.data.assignee))
+        && isNonEmptyString(request.resource.data.title, 200)
+        && isValidStatus(request.resource.data.status, ['Bekliyor', 'Devam Ediyor', 'Tamamlandı', 'İptal']);
+      // Silme yönetim yetkisi ile sınırlandı
+      allow delete: if isManagement();
+    }
+
+    // --- 4. BİLDİRİMLER ---
+    match /notifications/{notificationId} {
+      allow create: if isSignedIn()
+        && request.resource.data.recipientId is string
+        && isNonEmptyString(request.resource.data.message, 300)
+        && request.resource.data.type is string
+        && isBool(request.resource.data.isRead);
+      allow read, update: if isSignedIn()
+        && (isManagement() || request.auth.uid == resource.data.recipientId)
+        && (!('isRead' in request.resource.data) || isBool(request.resource.data.isRead));
+    }
+
+    // --- 5. SİPARİŞLER ---
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (isManagement() || isSelf(resource.data.userId));
+      allow create: if isSignedIn()
+        && isSelf(request.resource.data.userId)
+        && isNonEmptyString(request.resource.data.customer, 120)
+        && request.resource.data.items is list
+        && isNonNegativeNumber(request.resource.data.total, 100000000)
+        && isValidStatus(request.resource.data.status, ['Onaylandı', 'Hazırlanıyor', 'Kargolandı', 'Teslim Edildi', 'İptal'])
+        && isDateString(request.resource.data.date);
+      allow update: if isSignedIn()
+        && (isManagement() || isSelf(resource.data.userId))
+        && isValidStatus(request.resource.data.status, ['Onaylandı', 'Hazırlanıyor', 'Kargolandı', 'Teslim Edildi', 'İptal'])
+        && isNonNegativeNumber(request.resource.data.total, 100000000);
+      // Silme yönetim yetkisi ile sınırlandı
+      allow delete: if isManagement();
+    }
+
+    // --- 6. GÜNLÜK RAPORLAR ---
+    match /daily_reports/{reportId} {
+      // Yönetim tüm raporları görür, personel sadece kendi raporlarını görür
+      allow read: if isSignedIn() && (isManagement() || isSelf(resource.data.userId));
+      // Her kullanıcı kendi raporunu oluşturabilir, yönetim herkes adına oluşturabilir
+      allow create: if isSignedIn()
+        && (isManagement() || isSelf(request.resource.data.userId))
+        && isDateString(request.resource.data.date)
+        && request.resource.data.tasks is list
+        && request.resource.data.tasks.size() <= 200;
+      // Sadece yönetim veya rapor sahibi güncelleyebilir/silebilir
+      allow update, delete: if isSignedIn()
+        && (isManagement() || isSelf(resource.data.userId))
+        && request.resource.data.userId == resource.data.userId
+        && isDateString(request.resource.data.date)
+        && request.resource.data.tasks is list;
+    }
+
+    // --- 7. VARDİYALAR (GİRİŞ ÇIKIŞ) ---
+    match /shifts/{shiftId} {
+      // Yönetim tüm vardiyaları görür, personel sadece kendi vardiyalarını görür
+      allow read: if isSignedIn() && (isManagement() || isSelf(resource.data.userId));
+      // Kişi sadece kendi girişini yapabilir (veya yönetim manuel ekleyebilir)
+      allow create: if isSignedIn()
+        && (isSelf(request.resource.data.userId) || isManagement())
+        && isDateString(request.resource.data.date)
+        && isTimeString(request.resource.data.checkIn)
+        && isValidStatus(request.resource.data.status, ['İçeride', 'Molada', 'Tamamlandı', 'Dışarıda']);
+      // Kişi sadece kendi kaydını güncelleyebilir (çıkış/mola) veya yönetim güncelleyebilir
+      allow update: if isSignedIn()
+        && (isSelf(resource.data.userId) || isManagement())
+        && isDateString(request.resource.data.date)
+        && (!('checkOut' in request.resource.data) || request.resource.data.checkOut == '-' || isTimeString(request.resource.data.checkOut))
+        && isValidStatus(request.resource.data.status, ['İçeride', 'Molada', 'Tamamlandı', 'Dışarıda']);
+      // Sadece admin silebilir (minimum kırılma için korunuyor)
+      allow delete: if isAdmin();
+    }
+
+    // --- 8. İZİN YÖNETİMİ ---
+    match /leaves/{leaveId} {
+      // Yönetim tüm izinleri görür, personel sadece kendi izinlerini görür
+      allow read: if isSignedIn() && (isManagement() || isSelf(resource.data.userId));
+      
+      // Personel sadece kendi adına izin talep edebilir (veya yönetim herkes için edebilir)
+      allow create: if isSignedIn()
+        && (isSelf(request.resource.data.userId) || isManagement())
+        && isValidStatus(request.resource.data.status, ['Bekliyor', 'Onaylandı', 'Reddedildi'])
+        && isDateString(request.resource.data.start)
+        && isDateString(request.resource.data.end)
+        && isNonNegativeNumber(request.resource.data.days, 365);
+      
+      // Yönetim durumu güncelleyebilir, kişi sadece kendi talebini güncelleyebilir/silebilir
+      allow update: if isSignedIn()
+        && (
+          isManagement()
+          || (
+            isSelf(resource.data.userId)
+            && resource.data.status == 'Bekliyor'
+            && request.resource.data.status == resource.data.status
+          )
+        )
+        && isValidStatus(request.resource.data.status, ['Bekliyor', 'Onaylandı', 'Reddedildi'])
+        && isDateString(request.resource.data.start)
+        && isDateString(request.resource.data.end)
+        && isNonNegativeNumber(request.resource.data.days, 365);
+      allow delete: if isSignedIn()
+        && (
+          isManagement()
+          || (isSelf(resource.data.userId) && resource.data.status == 'Bekliyor')
+        );
+    }
+  }
+}

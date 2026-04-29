@@ -1,4 +1,4 @@
-import { getDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { getDoc, query, orderBy, serverTimestamp, where } from 'firebase/firestore';
 import {
   FIRESTORE_PATHS,
   collectionRef,
@@ -29,8 +29,21 @@ const mapReportSnapshot = (document) => {
   }; 
 };
 
-export const subscribeToReports = (callback) => {
-  const reportsQuery = query(collectionRef(REPORTS_COLLECTION), orderBy('date', 'desc'));
+export const subscribeToReports = (callback, options = {}) => {
+  const { uid, isManagement = false } = options;
+  if (!isManagement && !uid) {
+    callback([]);
+    return () => {};
+  }
+
+  const reportsQuery = isManagement
+    ? query(collectionRef(REPORTS_COLLECTION), orderBy('date', 'desc'))
+    : query(
+        collectionRef(REPORTS_COLLECTION),
+        where('userId', '==', uid),
+        orderBy('date', 'desc')
+      );
+
   return subscribeToQuery(SERVICE_NAME, 'subscribeToReports', reportsQuery, callback, mapReportSnapshot);
 };
 
