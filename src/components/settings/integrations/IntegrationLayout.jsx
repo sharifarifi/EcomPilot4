@@ -331,6 +331,14 @@ const IntegrationLayout = () => {
     }
   };
 
+  const getUserFriendlyErrorByCode = (code) => {
+    if (code === 'missing_connection_token') {
+      return 'Shopify bağlantı tokenı bulunamadı. Entegrasyonu yeniden bağlayın.';
+    }
+
+    return null;
+  };
+
   const handleShopifyAction = async (actionLabel) => {
     if (!selectedApp || !isShopifyApp(selectedApp)) return;
 
@@ -364,8 +372,18 @@ const IntegrationLayout = () => {
       });
 
       if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        const codeBasedMessage = getUserFriendlyErrorByCode(errorPayload?.error || errorPayload?.code);
         appendLocalLog(`${actionLabel} başarısız (${response.status})`, 'error');
-        showToast(getUserFriendlyError(response.status), 'error');
+        showToast(codeBasedMessage || getUserFriendlyError(response.status), 'error');
+        return;
+      }
+
+      const successPayload = await response.json().catch(() => ({}));
+      const softWarningMessage = getUserFriendlyErrorByCode(successPayload?.code);
+      if (softWarningMessage) {
+        appendLocalLog(`${actionLabel} uyarı: ${successPayload.code}`, 'error');
+        showToast(softWarningMessage, 'error');
         return;
       }
 

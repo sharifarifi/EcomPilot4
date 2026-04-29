@@ -4,6 +4,11 @@ import { HttpError, requireManagementAuth } from './_authz.js';
 import { getValidatedShopDomain } from './_validation.js';
 
 export const manualSync = async (req: Request, res: Response) => {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'method_not_allowed' });
+    return;
+  }
+
   try {
     await requireManagementAuth(req);
     const shopDomain = getValidatedShopDomain(req);

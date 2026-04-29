@@ -5,6 +5,11 @@ import { HttpError, requireManagementAuth } from './_authz.js';
 import { getValidatedShopDomain } from './_validation.js';
 
 export const connectionTest = async (req: Request, res: Response) => {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'method_not_allowed' });
+    return;
+  }
+
   try {
     await requireManagementAuth(req);
     const shopDomain = getValidatedShopDomain(req);
@@ -14,6 +19,15 @@ export const connectionTest = async (req: Request, res: Response) => {
     const storeSnapshot = await adminDb.collection('shopify_stores').doc(shopDomain).get();
     const storeData = storeSnapshot.exists ? storeSnapshot.data() : null;
     const persistedAccessToken = typeof storeData?.accessToken === 'string' ? storeData.accessToken : undefined;
+
+    if (!persistedAccessToken) {
+      res.status(200).json({
+        ok: false,
+        code: 'missing_connection_token',
+        message: 'Shopify bağlantı tokenı bulunamadı. Entegrasyonu yeniden bağlayın veya OAuth token saklama akışını tamamlayın.'
+      });
+      return;
+    }
 
     const client = createShopifyAdminClient(shopDomain, persistedAccessToken);
     const result = await testShopConnection(client);
