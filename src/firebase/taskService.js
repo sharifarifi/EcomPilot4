@@ -1,5 +1,6 @@
-import { query, orderBy, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { query, orderBy, serverTimestamp, arrayUnion, where } from 'firebase/firestore';
 import { sendNotification } from './notificationService';
+import { TASK_STATUSES, normalizeTaskStatusForRead, normalizeTaskStatusForWrite } from '../constants/statuses';
 import {
   FIRESTORE_PATHS,
   collectionRef,
@@ -20,9 +21,27 @@ const createSystemLogEntry = (text) => ({
   time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
 });
 
-export const subscribeToTasks = (callback) => {
-  const tasksQuery = query(collectionRef(TASKS_COLLECTION), orderBy('createdAt', 'desc'));
-  return subscribeToQuery(SERVICE_NAME, 'subscribeToTasks', tasksQuery, callback);
+export const subscribeToTasks = (callback, options = {}) => {
+  const { uid, isManagement = false } = options;
+  if (!isManagement && !uid) {
+    callback([]);
+    return () => {};
+  }
+
+  const tasksQuery = isManagement
+    ? query(collectionRef(TASKS_COLLECTION), orderBy('createdAt', 'desc'))
+    : query(
+        collectionRef(TASKS_COLLECTION),
+        where('assignee', '==', uid),
+        orderBy('createdAt', 'desc')
+      );
+
+  return subscribeToQuery(
+    SERVICE_NAME,
+    'subscribeToTasks',
+    tasksQuery,
+    (items) => callback(items.map((item) => ({ ...item, status: normalizeTaskStatusForRead(item.status) })))
+  );
 };
 
 export const addTask = async (taskData) => {
@@ -31,7 +50,7 @@ export const addTask = async (taskData) => {
     TASKS_COLLECTION,
     {
       ...taskData,
-      status: 'Bekliyor',
+      status: normalizeTaskStatusForWrite(TASK_STATUSES.PENDING),
       createdAt: serverTimestamp(),
       comments: [createSystemLogEntry('İş emri oluşturuldu.')]
     },
@@ -49,7 +68,7 @@ export const updateTaskStatus = async (taskId, newStatus, userName) => {
     TASKS_COLLECTION,
     taskId,
     {
-      status: newStatus,
+      status: normalizeTaskStatusForWrite(newStatus),
       comments: arrayUnion(createSystemLogEntry(`${userName} durumu değiştirdi: ${newStatus}`))
     },
     'updateTaskStatus'

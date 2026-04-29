@@ -6,7 +6,9 @@ import {
 
 // --- FIREBASE IMPORTLARI ---
 import { useAuth } from '../../context/AuthContext';
+import { isManagementRole } from '../../constants/roles';
 import { subscribeToOrders, addOrder, updateOrder, updateOrderStatus } from '../../firebase/orderService';
+import { ORDER_STATUSES } from '../../constants/statuses';
 
 // Şehir Verisi (Dosya yolu sizde farklı olabilir, kontrol edin!)
 import { cities } from '../../data/cities'; 
@@ -42,12 +44,22 @@ const OrderManager = () => {
 
   // --- VERİ ÇEKME ---
   useEffect(() => {
-    const unsubscribe = subscribeToOrders((data) => {
-      setOrders(data);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    const isManager = isManagementRole(userData?.role);
+    const fallbackTimer = setTimeout(() => setLoading(false), 1500);
+
+    const unsubscribe = subscribeToOrders(
+      (data) => {
+        setOrders(data);
+        setLoading(false);
+      },
+      { uid: userData?.uid, isManagement: isManager }
+    );
+
+    return () => {
+      clearTimeout(fallbackTimer);
+      unsubscribe();
+    };
+  }, [userData]);
 
   // --- FİLTRELEME ---
   const filteredProducts = useMemo(() => {
@@ -137,6 +149,7 @@ const OrderManager = () => {
         payment: newOrder.payment,
         items: newOrder.items,
         total: totalAmount,
+        userId: userData?.uid || '',
         taker: userData?.name || 'Sistem',
         date: new Date().toISOString().split('T')[0] // Sadece görüntüleme için tarih stringi
     };
@@ -165,11 +178,11 @@ const OrderManager = () => {
 
   const getStatusColor = (status) => {
     switch(status) {
-      case 'Onaylandı': return 'bg-blue-100 text-blue-700';
-      case 'Hazırlanıyor': return 'bg-yellow-100 text-yellow-700';
-      case 'Kargolandı': return 'bg-purple-100 text-purple-700';
-      case 'Teslim Edildi': return 'bg-green-100 text-green-700';
-      case 'İptal': return 'bg-red-100 text-red-700';
+      case ORDER_STATUSES.APPROVED: return 'bg-blue-100 text-blue-700';
+      case ORDER_STATUSES.PREPARING: return 'bg-yellow-100 text-yellow-700';
+      case ORDER_STATUSES.SHIPPED: return 'bg-purple-100 text-purple-700';
+      case ORDER_STATUSES.DELIVERED: return 'bg-green-100 text-green-700';
+      case ORDER_STATUSES.CANCELLED: return 'bg-red-100 text-red-700';
       default: return 'bg-slate-100 text-slate-700';
     }
   };

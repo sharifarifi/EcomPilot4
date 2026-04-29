@@ -14,7 +14,9 @@ import {
   getDepartments, saveDepartments 
 } from '../../../firebase/teamService';
 
-const ROLES = ['Admin', 'Manager', 'Personel', 'Editor'];
+import { ROLES as APP_ROLES } from '../../../constants/roles';
+
+const ROLES = [APP_ROLES.ADMIN, APP_ROLES.MANAGER, APP_ROLES.PERSONNEL, APP_ROLES.EDITOR];
 
 const AVATAR_COLORS = [
   'bg-blue-100 text-blue-600', 'bg-purple-100 text-purple-600', 'bg-pink-100 text-pink-600', 

@@ -14,8 +14,12 @@ import {
 import { subscribeToTasks } from '../../firebase/taskService';
 import { subscribeToShifts } from '../../firebase/shiftService';
 import { subscribeToLeaves } from '../../firebase/leaveService';
+import { useAuth } from '../../context/AuthContext';
+import { isManagementRole } from '../../constants/roles';
 
 const EmployeeReportCard = ({ employee, onClose }) => {
+  const { userData } = useAuth();
+  const isManager = isManagementRole(userData?.role);
   const [tasks, setTasks] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [leaves, setLeaves] = useState([]);
@@ -23,9 +27,10 @@ const EmployeeReportCard = ({ employee, onClose }) => {
 
   // --- VERİ ÇEKME ---
   useEffect(() => {
-    const unsubTasks = subscribeToTasks(setTasks);
-    const unsubShifts = subscribeToShifts(setShifts);
-    const unsubLeaves = subscribeToLeaves(setLeaves);
+    const queryScope = { uid: userData?.uid, isManagement: isManager };
+    const unsubTasks = subscribeToTasks(setTasks, queryScope);
+    const unsubShifts = subscribeToShifts(setShifts, queryScope);
+    const unsubLeaves = subscribeToLeaves(setLeaves, queryScope);
 
     setTimeout(() => setLoading(false), 800);
 
@@ -34,7 +39,7 @@ const EmployeeReportCard = ({ employee, onClose }) => {
       unsubShifts();
       unsubLeaves();
     };
-  }, []);
+  }, [userData, isManager]);
 
   // --- GERÇEK VERİLERİ İŞLEME MOTORU ---
   const details = useMemo(() => {

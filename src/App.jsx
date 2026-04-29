@@ -21,6 +21,7 @@ import Settings from './components/settings/SettingsLayout';
 import ReportsManager from './components/reports/ReportsManager';
 import Profile from './components/Profile';
 import ShopifyOrdersPage from './components/shopify/ShopifyOrdersPage';
+import { isManagementRole } from './constants/roles';
 
 // Yeni Eklenen Bildirim Zili
 import NotificationBell from './components/common/NotificationBell';
@@ -71,7 +72,7 @@ const MainApp = () => {
   // --- YETKİ KONTROLÜ ---
   const hasPerm = (permId) => {
     if (!userData) return false;
-    if (['Admin', 'Manager', 'CEO', 'Director'].includes(userData.role)) return true; 
+    if (isManagementRole(userData.role)) return true;
     
     const userPermissions = Array.isArray(userData.permissions) ? userData.permissions : [];
     return userPermissions.includes(permId);

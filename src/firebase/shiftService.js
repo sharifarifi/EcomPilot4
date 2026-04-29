@@ -5,19 +5,33 @@ import {
 } from "firebase/firestore";
 
 const SHIFTS_COLLECTION = "shifts";
+const SHIFT_UPDATE_ALLOWED_FIELDS = ['checkOut', 'status', 'breaks', 'note', 'updatedAt'];
 
 // --- VARDİYALARI DİNLE (Gerçek Zamanlı) ---
-export const subscribeToShifts = (callback) => {
+export const subscribeToShifts = (callback, options = {}) => {
+  const { uid, isManagement = false } = options;
+  if (!isManagement && !uid) {
+    callback([]);
+    return () => {};
+  }
+
   // Sadece son 30 günlük veriyi getir (Performans için)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const dateString = thirtyDaysAgo.toISOString().split('T')[0];
 
-  const q = query(
-      collection(db, SHIFTS_COLLECTION), 
-      where("date", ">=", dateString),
-      orderBy("date", "desc")
-  );
+  const q = isManagement
+    ? query(
+        collection(db, SHIFTS_COLLECTION), 
+        where("date", ">=", dateString),
+        orderBy("date", "desc")
+      )
+    : query(
+        collection(db, SHIFTS_COLLECTION),
+        where("userId", "==", uid),
+        where("date", ">=", dateString),
+        orderBy("date", "desc")
+      );
 
   return onSnapshot(q, (snapshot) => {
     const shifts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -59,8 +73,14 @@ export const checkIn = async (shiftData) => {
 // --- ÇIKIŞ YAP (Check-Out) VEYA MOLA GÜNCELLE ---
 export const updateShift = async (shiftId, updateData) => {
   try {
+    const payload = Object.fromEntries(
+      Object.entries(updateData || {}).filter(([key, value]) => (
+        SHIFT_UPDATE_ALLOWED_FIELDS.includes(key) && value !== undefined
+      ))
+    );
+
     const shiftRef = doc(db, SHIFTS_COLLECTION, shiftId);
-    await updateDoc(shiftRef, updateData);
+    await updateDoc(shiftRef, payload);
   } catch (error) {
     console.error("Güncelleme hatası:", error);
     throw error;
