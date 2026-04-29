@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { isManagementRole } from '../../constants/roles';
 import { subscribeToOrders, addOrder, updateOrder, updateOrderStatus } from '../../firebase/orderService';
+import { ORDER_STATUSES } from '../../constants/statuses';
 
 // Şehir Verisi (Dosya yolu sizde farklı olabilir, kontrol edin!)
 import { cities } from '../../data/cities'; 
@@ -177,11 +178,11 @@ const OrderManager = () => {
 
   const getStatusColor = (status) => {
     switch(status) {
-      case 'Onaylandı': return 'bg-blue-100 text-blue-700';
-      case 'Hazırlanıyor': return 'bg-yellow-100 text-yellow-700';
-      case 'Kargolandı': return 'bg-purple-100 text-purple-700';
-      case 'Teslim Edildi': return 'bg-green-100 text-green-700';
-      case 'İptal': return 'bg-red-100 text-red-700';
+      case ORDER_STATUSES.APPROVED: return 'bg-blue-100 text-blue-700';
+      case ORDER_STATUSES.PREPARING: return 'bg-yellow-100 text-yellow-700';
+      case ORDER_STATUSES.SHIPPED: return 'bg-purple-100 text-purple-700';
+      case ORDER_STATUSES.DELIVERED: return 'bg-green-100 text-green-700';
+      case ORDER_STATUSES.CANCELLED: return 'bg-red-100 text-red-700';
       default: return 'bg-slate-100 text-slate-700';
     }
   };

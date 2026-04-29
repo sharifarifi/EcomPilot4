@@ -262,7 +262,7 @@ const TaskBoard = () => {
                  
                  {(isManager || selectedTask.assignee === userData?.uid) ? (
                      <div className="flex gap-2 p-1 bg-white border border-slate-200 rounded-xl shadow-sm">
-                        {['Bekliyor', 'Sürüyor', 'Tamamlandı'].map(s=>(
+                        {[TASK_STATUSES.PENDING, TASK_STATUSES.IN_PROGRESS, TASK_STATUSES.COMPLETED].map(s=>(
                             <button key={s} onClick={()=>handleChangeStatus(selectedTask.id, s)} className={`flex-1 text-xs font-bold py-2 rounded-lg transition ${selectedTask.status===s?'bg-slate-900 text-white shadow':'text-slate-500 hover:bg-slate-50'}`}>{s}</button>
                         ))}
                      </div>

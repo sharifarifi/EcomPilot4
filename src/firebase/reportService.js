@@ -9,14 +9,14 @@ import {
   updateDocument
 } from './serviceCore';
 import { normalizeReportStatus } from '../utils/reportEditUtils';
-import { REPORT_STATUSES } from '../constants/statuses';
+import { REPORT_STATUSES, normalizeTaskStatusForRead, normalizeTaskStatusForWrite } from '../constants/statuses';
 
 const SERVICE_NAME = 'reportService';
 const REPORTS_COLLECTION = FIRESTORE_PATHS.dailyReports;
 
 const deriveReportStatusFromTasks = (tasks) => {
   if (!Array.isArray(tasks) || !tasks.length) return null;
-  const allCompleted = tasks.every((task) => normalizeReportStatus(task?.status) === 'completed');
+  const allCompleted = tasks.every((task) => normalizeReportStatus(normalizeTaskStatusForRead(task?.status)) === 'completed');
   return allCompleted ? REPORT_STATUSES.COMPLETED : REPORT_STATUSES.IN_PROGRESS;
 };
 
@@ -50,8 +50,12 @@ export const subscribeToReports = (callback, options = {}) => {
 
 export const addReport = async (reportData) => {
   const statusFromTasks = deriveReportStatusFromTasks(reportData?.tasks);
+  const normalizedTasks = Array.isArray(reportData?.tasks)
+    ? reportData.tasks.map((task) => ({ ...task, status: normalizeTaskStatusForWrite(task?.status) }))
+    : reportData?.tasks;
   const payload = {
     ...reportData,
+    ...(Array.isArray(normalizedTasks) ? { tasks: normalizedTasks } : {}),
     ...(statusFromTasks ? { status: statusFromTasks } : {}),
     createdAt: serverTimestamp()
   };
@@ -73,13 +77,17 @@ export const updateReport = async (reportId, updatedData) => {
   const existingSnapshot = await getDoc(reportRef);
   const existingData = existingSnapshot.exists() ? existingSnapshot.data() : {};
 
-  const statusFromTasks = deriveReportStatusFromTasks(updatedData?.tasks);
+  const normalizedTasks = Array.isArray(updatedData?.tasks)
+    ? updatedData.tasks.map((task) => ({ ...task, status: normalizeTaskStatusForWrite(task?.status) }))
+    : updatedData?.tasks;
+  const statusFromTasks = deriveReportStatusFromTasks(normalizedTasks);
   const nextStatus = statusFromTasks || updatedData?.status || existingData?.status;
   const normalizedNextStatus = normalizeReportStatus(nextStatus);
   const normalizedPreviousStatus = normalizeReportStatus(existingData?.status);
 
   const payload = {
     ...updatedData,
+    ...(Array.isArray(normalizedTasks) ? { tasks: normalizedTasks } : {}),
     ...(statusFromTasks ? { status: statusFromTasks } : {})
   };
 

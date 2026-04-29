@@ -34,3 +34,21 @@ export const REPORT_STATUSES = Object.freeze({
   IN_PROGRESS: TASK_STATUSES.IN_PROGRESS,
   COMPLETED: TASK_STATUSES.COMPLETED
 });
+
+const TASK_STATUS_ALIAS_TO_CANONICAL = Object.freeze({
+  [TASK_UI_ALIASES.IN_PROGRESS]: TASK_STATUSES.IN_PROGRESS
+});
+
+export const normalizeTaskStatusForRead = (status) => (
+  TASK_STATUS_ALIAS_TO_CANONICAL[status] || status
+);
+
+export const normalizeTaskStatusForWrite = (status) => (
+  TASK_STATUS_ALIAS_TO_CANONICAL[status] || status
+);
+
+export const getTaskStatusDisplayLabel = (status) => {
+  const normalized = normalizeTaskStatusForRead(status);
+  if (normalized === TASK_STATUSES.IN_PROGRESS) return TASK_UI_ALIASES.IN_PROGRESS;
+  return normalized;
+};

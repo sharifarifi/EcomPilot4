@@ -1,6 +1,6 @@
 import { query, orderBy, serverTimestamp, arrayUnion, where } from 'firebase/firestore';
 import { sendNotification } from './notificationService';
-import { TASK_STATUSES } from '../constants/statuses';
+import { TASK_STATUSES, normalizeTaskStatusForRead, normalizeTaskStatusForWrite } from '../constants/statuses';
 import {
   FIRESTORE_PATHS,
   collectionRef,
@@ -36,7 +36,12 @@ export const subscribeToTasks = (callback, options = {}) => {
         orderBy('createdAt', 'desc')
       );
 
-  return subscribeToQuery(SERVICE_NAME, 'subscribeToTasks', tasksQuery, callback);
+  return subscribeToQuery(
+    SERVICE_NAME,
+    'subscribeToTasks',
+    tasksQuery,
+    (items) => callback(items.map((item) => ({ ...item, status: normalizeTaskStatusForRead(item.status) })))
+  );
 };
 
 export const addTask = async (taskData) => {
@@ -45,7 +50,7 @@ export const addTask = async (taskData) => {
     TASKS_COLLECTION,
     {
       ...taskData,
-      status: TASK_STATUSES.PENDING,
+      status: normalizeTaskStatusForWrite(TASK_STATUSES.PENDING),
       createdAt: serverTimestamp(),
       comments: [createSystemLogEntry('İş emri oluşturuldu.')]
     },
@@ -63,7 +68,7 @@ export const updateTaskStatus = async (taskId, newStatus, userName) => {
     TASKS_COLLECTION,
     taskId,
     {
-      status: newStatus,
+      status: normalizeTaskStatusForWrite(newStatus),
       comments: arrayUnion(createSystemLogEntry(`${userName} durumu değiştirdi: ${newStatus}`))
     },
     'updateTaskStatus'

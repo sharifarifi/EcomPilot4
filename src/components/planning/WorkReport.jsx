@@ -8,7 +8,13 @@ import {
 
 import { useAuth } from '../../context/AuthContext';
 import { isManagementRole } from '../../constants/roles';
-import { TASK_STATUSES, TASK_UI_ALIASES } from '../../constants/statuses';
+import {
+  TASK_STATUSES,
+  TASK_UI_ALIASES,
+  getTaskStatusDisplayLabel,
+  normalizeTaskStatusForRead,
+  normalizeTaskStatusForWrite
+} from '../../constants/statuses';
 import { subscribeToReports, addReport, updateReport, deleteReport } from '../../firebase/reportService';
 import { subscribeToTasks } from '../../firebase/taskService';
 import { getDepartments } from '../../firebase/teamService'; 
@@ -49,7 +55,7 @@ const WorkReport = () => {
   const [editingTaskIndex, setEditingTaskIndex] = useState(null);
   const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
   const [tempTasks, setTempTasks] = useState([]);
-  const initialTaskState = { title: '', category: '', status: 'Tamamlandı', detail: '', note: '' };
+  const initialTaskState = { title: '', category: '', status: TASK_STATUSES.COMPLETED, detail: '', note: '' };
   const [currentTask, setCurrentTask] = useState(initialTaskState);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const isEditingTask = editingTaskIndex !== null;
@@ -96,7 +102,7 @@ const WorkReport = () => {
                 id: task.id,
                 title: task.title,
                 category: task.department || 'İş Emri', // Görevin departmanını al
-                status: task.status,
+                status: normalizeTaskStatusForRead(task.status),
                 detail: task.detail || 'Sistem tarafından oluşturuldu.',
                 note: `Öncelik: ${task.priority}`,
                 isSystemTask: true
@@ -139,10 +145,10 @@ const WorkReport = () => {
 
         // Durum Kontrolü (YENİ EKLENDİ)
         if (statusFilter === TASK_UI_ALIASES.IN_PROGRESS) {
-            const hasPending = r.tasks && r.tasks.some(t => t.status !== TASK_STATUSES.COMPLETED);
+            const hasPending = r.tasks && r.tasks.some(t => normalizeTaskStatusForRead(t.status) !== TASK_STATUSES.COMPLETED);
             if (!hasPending) return false;
         } else if (statusFilter === TASK_STATUSES.COMPLETED) {
-            const isAllCompleted = r.tasks && r.tasks.length > 0 && r.tasks.every(t => t.status === TASK_STATUSES.COMPLETED);
+            const isAllCompleted = r.tasks && r.tasks.length > 0 && r.tasks.every(t => normalizeTaskStatusForRead(t.status) === TASK_STATUSES.COMPLETED);
             if (!isAllCompleted) return false;
         }
 
@@ -187,7 +193,7 @@ const WorkReport = () => {
         if(r.tasks) {
             r.tasks.forEach(t => {
                 total++;
-                if(t.status === TASK_STATUSES.COMPLETED) completed++;
+                if(normalizeTaskStatusForRead(t.status) === TASK_STATUSES.COMPLETED) completed++;
             });
         }
     });
@@ -231,6 +237,7 @@ const WorkReport = () => {
   const normalizeTaskForEdit = (task, fallbackIndex = 0) => ({
     ...initialTaskState,
     ...task,
+    status: normalizeTaskStatusForRead(task?.status || initialTaskState.status),
     id: task?.id || `task-${Date.now()}-${fallbackIndex}`
   });
 
@@ -268,7 +275,10 @@ const WorkReport = () => {
     if(!currentTask.title) return alert("Lütfen bir görev başlığı girin.");
     if(!currentTask.category) return alert("Lütfen bir departman seçiniz.");
     
-    const newTask = normalizeTaskForEdit(currentTask, tempTasks.length);
+    const newTask = {
+      ...normalizeTaskForEdit(currentTask, tempTasks.length),
+      status: normalizeTaskStatusForWrite(currentTask.status)
+    };
     if(editingTaskIndex !== null) {
         const updated = [...tempTasks];
         updated[editingTaskIndex] = newTask;
@@ -362,8 +372,8 @@ const WorkReport = () => {
                     className="appearance-none bg-slate-50 border border-slate-200 pl-3 pr-8 py-2 rounded-lg text-sm font-medium text-slate-600 outline-none cursor-pointer hover:border-slate-300 transition"
                 >
                     <option value="Tümü">Tüm Durumlar</option>
-                    <option value="Sürüyor">Süren İşler</option>
-                    <option value="Tamamlandı">Tamamlananlar</option>
+                    <option value={TASK_UI_ALIASES.IN_PROGRESS}>Süren İşler</option>
+                    <option value={TASK_STATUSES.COMPLETED}>Tamamlananlar</option>
                 </select>
                 <ChevronDown size={14} className="absolute right-3 top-3 text-slate-400 pointer-events-none"/>
             </div>
@@ -529,7 +539,7 @@ const WorkReport = () => {
                                                     ) : (
                                                         report.tasks.map((task, idx) => (
                                                             <div key={idx} className={`bg-white p-4 rounded-xl border shadow-sm flex items-start gap-4 ${task.isSystemTask ? 'border-purple-100' : 'border-slate-200'}`}>
-                                                                <div className={`mt-1.5 w-3 h-3 rounded-full flex-shrink-0 ${task.status === 'Tamamlandı' ? 'bg-green-500' : task.status === 'Sürüyor' ? 'bg-blue-500' : 'bg-orange-400'}`}></div>
+                                                                <div className={`mt-1.5 w-3 h-3 rounded-full flex-shrink-0 ${normalizeTaskStatusForRead(task.status) === TASK_STATUSES.COMPLETED ? 'bg-green-500' : normalizeTaskStatusForRead(task.status) === TASK_STATUSES.IN_PROGRESS ? 'bg-blue-500' : 'bg-orange-400'}`}></div>
                                                                 <div className="flex-1">
                                                                     <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
                                                                         <div>
@@ -539,7 +549,7 @@ const WorkReport = () => {
                                                                             </h5>
                                                                             <p className="text-sm text-slate-600 mt-1">{task.detail}</p>
                                                                         </div>
-                                                                        <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase self-start ${task.status==='Tamamlandı'?'bg-green-50 text-green-600': task.status==='Sürüyor'?'bg-blue-50 text-blue-600':'bg-orange-50 text-orange-600'}`}>{task.status}</span>
+                                                                        <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase self-start ${normalizeTaskStatusForRead(task.status)===TASK_STATUSES.COMPLETED?'bg-green-50 text-green-600': normalizeTaskStatusForRead(task.status)===TASK_STATUSES.IN_PROGRESS?'bg-blue-50 text-blue-600':'bg-orange-50 text-orange-600'}`}>{getTaskStatusDisplayLabel(task.status)}</span>
                                                                     </div>
                                                                     <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-400 font-medium">
                                                                         <span className="bg-slate-100 px-2 py-1 rounded text-slate-600">{task.category}</span>
@@ -599,9 +609,9 @@ const WorkReport = () => {
                             <div>
                                 <label className="text-xs font-bold text-slate-400 mb-1 block">DURUM</label>
                                 <select className="w-full border border-slate-300 p-2.5 rounded-lg text-sm bg-white outline-none focus:border-blue-500 transition" value={currentTask.status} onChange={e => setCurrentTask({...currentTask, status: e.target.value})}>
-                                    <option value="Tamamlandı">Tamamlandı</option>
-                                    <option value="Sürüyor">Sürüyor</option>
-                                    <option value="Bekliyor">Bekliyor</option>
+                                    <option value={TASK_STATUSES.COMPLETED}>{TASK_STATUSES.COMPLETED}</option>
+                                    <option value={TASK_STATUSES.IN_PROGRESS}>{TASK_UI_ALIASES.IN_PROGRESS}</option>
+                                    <option value={TASK_STATUSES.PENDING}>{TASK_STATUSES.PENDING}</option>
                                 </select>
                             </div>
                         </div>
