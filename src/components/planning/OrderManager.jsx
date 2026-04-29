@@ -43,6 +43,8 @@ const OrderManager = () => {
   // --- VERİ ÇEKME ---
   useEffect(() => {
     const isManager = ['ADMIN', 'MANAGER', 'CEO', 'DIRECTOR'].includes(String(userData?.role || '').toUpperCase());
+    const fallbackTimer = setTimeout(() => setLoading(false), 1500);
+
     const unsubscribe = subscribeToOrders(
       (data) => {
         setOrders(data);
@@ -50,7 +52,11 @@ const OrderManager = () => {
       },
       { uid: userData?.uid, isManagement: isManager }
     );
-    return () => unsubscribe();
+
+    return () => {
+      clearTimeout(fallbackTimer);
+      unsubscribe();
+    };
   }, [userData]);
 
   // --- FİLTRELEME ---

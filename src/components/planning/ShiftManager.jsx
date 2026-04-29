@@ -52,6 +52,7 @@ const ShiftManager = () => {
   // --- VERİ YÜKLEME ---
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const loadingFallbackTimer = setTimeout(() => setLoading(false), 2000);
     
     const fetchData = async () => {
         try {
@@ -82,7 +83,10 @@ const ShiftManager = () => {
         return () => unsub();
     };
     fetchData();
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(loadingFallbackTimer);
+    };
   }, [userData, isManager]);
 
   useEffect(() => {

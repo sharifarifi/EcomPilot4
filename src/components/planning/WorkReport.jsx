@@ -54,6 +54,8 @@ const WorkReport = () => {
 
   // --- VERİ ÇEKME ---
   useEffect(() => {
+    const loadingFallbackTimer = setTimeout(() => setLoading(false), 2000);
+
     const fetchData = async () => {
         try {
             const depts = await getDepartments();
@@ -74,6 +76,7 @@ const WorkReport = () => {
         return () => { unsub1(); unsub2(); };
     };
     fetchData();
+    return () => clearTimeout(loadingFallbackTimer);
   }, [userData, isManager]);
 
   // --- VERİ BİRLEŞTİRME & İŞLEME ---
