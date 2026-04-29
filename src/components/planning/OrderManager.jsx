@@ -6,6 +6,7 @@ import {
 
 // --- FIREBASE IMPORTLARI ---
 import { useAuth } from '../../context/AuthContext';
+import { isManagementRole } from '../../constants/roles';
 import { subscribeToOrders, addOrder, updateOrder, updateOrderStatus } from '../../firebase/orderService';
 
 // Şehir Verisi (Dosya yolu sizde farklı olabilir, kontrol edin!)
@@ -42,12 +43,22 @@ const OrderManager = () => {
 
   // --- VERİ ÇEKME ---
   useEffect(() => {
-    const unsubscribe = subscribeToOrders((data) => {
-      setOrders(data);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    const isManager = isManagementRole(userData?.role);
+    const fallbackTimer = setTimeout(() => setLoading(false), 1500);
+
+    const unsubscribe = subscribeToOrders(
+      (data) => {
+        setOrders(data);
+        setLoading(false);
+      },
+      { uid: userData?.uid, isManagement: isManager }
+    );
+
+    return () => {
+      clearTimeout(fallbackTimer);
+      unsubscribe();
+    };
+  }, [userData]);
 
   // --- FİLTRELEME ---
   const filteredProducts = useMemo(() => {
@@ -137,6 +148,7 @@ const OrderManager = () => {
         payment: newOrder.payment,
         items: newOrder.items,
         total: totalAmount,
+        userId: userData?.uid || '',
         taker: userData?.name || 'Sistem',
         date: new Date().toISOString().split('T')[0] // Sadece görüntüleme için tarih stringi
     };

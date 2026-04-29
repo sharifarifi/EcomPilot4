@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../../context/AuthContext';
+import { isManagementRole } from '../../constants/roles';
+import { TASK_STATUSES, TASK_UI_ALIASES } from '../../constants/statuses';
 import { subscribeToReports, addReport, updateReport, deleteReport } from '../../firebase/reportService';
 import { subscribeToTasks } from '../../firebase/taskService';
 import { getDepartments } from '../../firebase/teamService'; 
@@ -18,7 +20,7 @@ import {
 
 const WorkReport = () => {
   const { userData } = useAuth();
-  const isManager = ['Admin', 'Manager', 'CEO', 'Director'].includes(userData?.role);
+  const isManager = isManagementRole(userData?.role);
 
   // --- STATE ---
   const [dailyReports, setDailyReports] = useState([]);
@@ -54,21 +56,30 @@ const WorkReport = () => {
 
   // --- VERİ ÇEKME ---
   useEffect(() => {
+    const loadingFallbackTimer = setTimeout(() => setLoading(false), 2000);
+
     const fetchData = async () => {
         try {
             const depts = await getDepartments();
             setDepartments(depts || []);
         } catch(e) { console.error(e); }
         
-        const unsub1 = subscribeToReports(setDailyReports);
-        const unsub2 = subscribeToTasks((data) => {
+        const unsub1 = subscribeToReports(
+          setDailyReports,
+          { uid: userData?.uid, isManagement: isManager }
+        );
+        const unsub2 = subscribeToTasks(
+          (data) => {
             setSystemTasks(data);
             setLoading(false);
-        });
+          },
+          { uid: userData?.uid, isManagement: isManager }
+        );
         return () => { unsub1(); unsub2(); };
     };
     fetchData();
-  }, []);
+    return () => clearTimeout(loadingFallbackTimer);
+  }, [userData, isManager]);
 
   // --- VERİ BİRLEŞTİRME & İŞLEME ---
   const processedReports = useMemo(() => {
@@ -127,11 +138,11 @@ const WorkReport = () => {
         }
 
         // Durum Kontrolü (YENİ EKLENDİ)
-        if (statusFilter === 'Sürüyor') {
-            const hasPending = r.tasks && r.tasks.some(t => t.status !== 'Tamamlandı');
+        if (statusFilter === TASK_UI_ALIASES.IN_PROGRESS) {
+            const hasPending = r.tasks && r.tasks.some(t => t.status !== TASK_STATUSES.COMPLETED);
             if (!hasPending) return false;
-        } else if (statusFilter === 'Tamamlandı') {
-            const isAllCompleted = r.tasks && r.tasks.length > 0 && r.tasks.every(t => t.status === 'Tamamlandı');
+        } else if (statusFilter === TASK_STATUSES.COMPLETED) {
+            const isAllCompleted = r.tasks && r.tasks.length > 0 && r.tasks.every(t => t.status === TASK_STATUSES.COMPLETED);
             if (!isAllCompleted) return false;
         }
 
@@ -176,7 +187,7 @@ const WorkReport = () => {
         if(r.tasks) {
             r.tasks.forEach(t => {
                 total++;
-                if(t.status === 'Tamamlandı') completed++;
+                if(t.status === TASK_STATUSES.COMPLETED) completed++;
             });
         }
     });
@@ -417,7 +428,7 @@ const WorkReport = () => {
                         const editState = reportEditStateMap.get(report.id) || getReportEditState(report);
                         const editable = editState.editable;
                         const totalTasks = report.tasks ? report.tasks.length : 0;
-                        const completedTasks = report.tasks ? report.tasks.filter(t => t.status === 'Tamamlandı').length : 0;
+                        const completedTasks = report.tasks ? report.tasks.filter(t => t.status === TASK_STATUSES.COMPLETED).length : 0;
                         const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
                         
                         // Satırdaki genel departmanı bulmak için
@@ -632,7 +643,7 @@ const WorkReport = () => {
                                         <div className="font-bold text-sm text-slate-800">{t.title}</div>
                                         <div className="text-xs text-slate-500 mt-1 flex gap-2 items-center">
                                             <span className="bg-slate-100 px-2 py-0.5 rounded font-medium">{t.category}</span>
-                                            <span className={t.status === 'Tamamlandı' ? 'text-green-600' : 'text-blue-600'}>{t.status}</span>
+                                            <span className={t.status === TASK_STATUSES.COMPLETED ? 'text-green-600' : 'text-blue-600'}>{t.status}</span>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1">

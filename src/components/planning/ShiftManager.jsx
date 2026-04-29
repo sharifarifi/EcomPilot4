@@ -8,6 +8,7 @@ import {
 
 // FIREBASE
 import { useAuth } from '../../context/AuthContext';
+import { isManagementRole } from '../../constants/roles';
 import { subscribeToShifts, getTodayShiftByUser, checkIn, updateShift } from '../../firebase/shiftService';
 import { getDepartments } from '../../firebase/teamService';
 import { collection, getDocs } from 'firebase/firestore'; 
@@ -15,7 +16,7 @@ import { db } from '../../firebase/firebaseConfig';
 
 const ShiftManager = () => {
   const { userData } = useAuth();
-  const isManager = ['Admin', 'Manager', 'CEO', 'Director'].includes(userData?.role);
+  const isManager = isManagementRole(userData?.role);
 
   // --- DİNAMİK OPERASYON AYARLARI ---
   const [opSettings, setOpSettings] = useState({
@@ -52,6 +53,7 @@ const ShiftManager = () => {
   // --- VERİ YÜKLEME ---
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const loadingFallbackTimer = setTimeout(() => setLoading(false), 2000);
     
     const fetchData = async () => {
         try {
@@ -72,15 +74,21 @@ const ShiftManager = () => {
 
         } catch(e) { console.error(e); }
 
-        const unsub = subscribeToShifts((data) => {
+        const unsub = subscribeToShifts(
+          (data) => {
             setShifts(data || []);
             setLoading(false);
-        });
+          },
+          { uid: userData?.uid, isManagement: isManager }
+        );
         return () => unsub();
     };
     fetchData();
-    return () => clearInterval(timer);
-  }, []);
+    return () => {
+      clearInterval(timer);
+      clearTimeout(loadingFallbackTimer);
+    };
+  }, [userData, isManager]);
 
   useEffect(() => {
     const checkMyShift = async () => {

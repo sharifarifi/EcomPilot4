@@ -12,6 +12,8 @@ import {
 
 // --- FIREBASE SERVİSİ ---
 import { subscribeToTasks } from '../../firebase/taskService';
+import { useAuth } from '../../context/AuthContext';
+import { isManagementRole } from '../../constants/roles';
 
 // --- DEMO / YEDEK VERİLER ---
 const BASE_CARGO = [
@@ -82,6 +84,8 @@ const OperationsTooltip = ({ active, payload, label }) => {
 };
 
 const OperationsLogistics = () => {
+  const { userData } = useAuth();
+  const isManager = isManagementRole(userData?.role);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -94,10 +98,13 @@ const OperationsLogistics = () => {
   const [customEnd, setCustomEnd] = useState(() => new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
-    const unsubTasks = subscribeToTasks(setTasks);
+    const unsubTasks = subscribeToTasks(
+      setTasks,
+      { uid: userData?.uid, isManagement: isManager }
+    );
     setTimeout(() => setLoading(false), 800); 
     return () => unsubTasks();
-  }, []);
+  }, [userData, isManager]);
 
   // --- GÜVENLİ VE KAPSAMLI TARİH FİLTRESİ HESAPLAMA ---
   const dateLimits = useMemo(() => {

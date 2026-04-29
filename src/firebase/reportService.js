@@ -1,4 +1,4 @@
-import { getDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { getDoc, query, orderBy, serverTimestamp, where } from 'firebase/firestore';
 import {
   FIRESTORE_PATHS,
   collectionRef,
@@ -9,6 +9,7 @@ import {
   updateDocument
 } from './serviceCore';
 import { normalizeReportStatus } from '../utils/reportEditUtils';
+import { REPORT_STATUSES } from '../constants/statuses';
 
 const SERVICE_NAME = 'reportService';
 const REPORTS_COLLECTION = FIRESTORE_PATHS.dailyReports;
@@ -16,7 +17,7 @@ const REPORTS_COLLECTION = FIRESTORE_PATHS.dailyReports;
 const deriveReportStatusFromTasks = (tasks) => {
   if (!Array.isArray(tasks) || !tasks.length) return null;
   const allCompleted = tasks.every((task) => normalizeReportStatus(task?.status) === 'completed');
-  return allCompleted ? 'Tamamlandı' : 'Devam Ediyor';
+  return allCompleted ? REPORT_STATUSES.COMPLETED : REPORT_STATUSES.IN_PROGRESS;
 };
 
 const mapReportSnapshot = (document) => {
@@ -29,8 +30,21 @@ const mapReportSnapshot = (document) => {
   }; 
 };
 
-export const subscribeToReports = (callback) => {
-  const reportsQuery = query(collectionRef(REPORTS_COLLECTION), orderBy('date', 'desc'));
+export const subscribeToReports = (callback, options = {}) => {
+  const { uid, isManagement = false } = options;
+  if (!isManagement && !uid) {
+    callback([]);
+    return () => {};
+  }
+
+  const reportsQuery = isManagement
+    ? query(collectionRef(REPORTS_COLLECTION), orderBy('date', 'desc'))
+    : query(
+        collectionRef(REPORTS_COLLECTION),
+        where('userId', '==', uid),
+        orderBy('date', 'desc')
+      );
+
   return subscribeToQuery(SERVICE_NAME, 'subscribeToReports', reportsQuery, callback, mapReportSnapshot);
 };
 
