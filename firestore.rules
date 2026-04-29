@@ -44,7 +44,7 @@ service cloud.firestore {
 
     // --- 1. EKİP ÜYELERİ ---
     match /team_members/{userId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (isManagement() || isSelf(userId));
       allow create: if isAdmin()
         && request.resource.data.uid == userId
         && request.resource.data.email is string
@@ -82,13 +82,16 @@ service cloud.firestore {
     
     // --- 3. GÖREVLER (TASKS) ---
     match /tasks/{taskId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn()
+        && (isManagement() || isSelf(resource.data.assignee));
       allow create: if isSignedIn()
+        && (isManagement() || isSelf(request.resource.data.assignee))
         && isNonEmptyString(request.resource.data.title, 200)
         && isValidStatus(request.resource.data.status, ['Bekliyor', 'Devam Ediyor', 'Tamamlandı', 'İptal'])
         && request.resource.data.assignee is string
         && isDateString(request.resource.data.dueDate);
       allow update: if isSignedIn()
+        && (isManagement() || isSelf(resource.data.assignee))
         && isNonEmptyString(request.resource.data.title, 200)
         && isValidStatus(request.resource.data.status, ['Bekliyor', 'Devam Ediyor', 'Tamamlandı', 'İptal']);
       // Silme yönetim yetkisi ile sınırlandı
@@ -109,7 +112,7 @@ service cloud.firestore {
 
     // --- 5. SİPARİŞLER ---
     match /orders/{orderId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() && (isManagement() || isSelf(resource.data.userId));
       allow create: if isSignedIn()
         && isSelf(request.resource.data.userId)
         && isNonEmptyString(request.resource.data.customer, 120)
@@ -138,6 +141,7 @@ service cloud.firestore {
       // Sadece yönetim veya rapor sahibi güncelleyebilir/silebilir
       allow update, delete: if isSignedIn()
         && (isManagement() || isSelf(resource.data.userId))
+        && request.resource.data.userId == resource.data.userId
         && isDateString(request.resource.data.date)
         && request.resource.data.tasks is list;
     }
@@ -177,12 +181,23 @@ service cloud.firestore {
       
       // Yönetim durumu güncelleyebilir, kişi sadece kendi talebini güncelleyebilir/silebilir
       allow update: if isSignedIn()
-        && (isManagement() || isSelf(resource.data.userId))
+        && (
+          isManagement()
+          || (
+            isSelf(resource.data.userId)
+            && resource.data.status == 'Bekliyor'
+            && request.resource.data.status == resource.data.status
+          )
+        )
         && isValidStatus(request.resource.data.status, ['Bekliyor', 'Onaylandı', 'Reddedildi'])
         && isDateString(request.resource.data.start)
         && isDateString(request.resource.data.end)
         && isNonNegativeNumber(request.resource.data.days, 365);
-      allow delete: if isSignedIn() && (isManagement() || isSelf(resource.data.userId));
+      allow delete: if isSignedIn()
+        && (
+          isManagement()
+          || (isSelf(resource.data.userId) && resource.data.status == 'Bekliyor')
+        );
     }
   }
 }
