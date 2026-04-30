@@ -56,6 +56,7 @@ const ShopifyOrdersPage = () => {
   const [store, setStore] = useState(null);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [isLoadingStore, setIsLoadingStore] = useState(true);
+  const [ordersError, setOrdersError] = useState('');
 
   const storeId = useMemo(
     () => normalizeShopDomain(shopifyConfig.defaultShopDomain),
@@ -63,10 +64,18 @@ const ShopifyOrdersPage = () => {
   );
 
   useEffect(() => {
-    const unsubscribe = subscribeToShopifyOrders((nextOrders) => {
-      setOrders(Array.isArray(nextOrders) ? nextOrders : []);
-      setIsLoadingOrders(false);
-    });
+    const unsubscribe = subscribeToShopifyOrders(
+      (nextOrders) => {
+        setOrders(Array.isArray(nextOrders) ? nextOrders : []);
+        setOrdersError('');
+        setIsLoadingOrders(false);
+      },
+      (error) => {
+        console.error('Shopify siparişleri dinlenirken hata oluştu:', error);
+        setOrdersError('Shopify siparişleri yüklenirken bir hata oluştu.');
+        setIsLoadingOrders(false);
+      }
+    );
 
     return () => unsubscribe();
   }, []);
@@ -104,13 +113,22 @@ const ShopifyOrdersPage = () => {
       );
     }
 
+    if (ordersError) {
+      return (
+        <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center">
+          <h3 className="text-xl font-black text-red-700">Veri alınamadı</h3>
+          <p className="mt-2 text-sm text-red-600">{ordersError}</p>
+        </div>
+      );
+    }
+
     if (orders.length === 0) {
       return (
         <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
           <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-blue-50 text-blue-600">
             <ClipboardList size={36} />
           </div>
-          <h3 className="text-2xl font-black text-slate-800">Henüz Shopify siparişi yok</h3>
+          <h3 className="text-2xl font-black text-slate-800">Henüz Shopify siparişi bulunamadı.</h3>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-500">
             Firestore `shopify_orders` koleksiyonuna veri düşmediği için bu ekran boş görünüyor. Önce backend tarafında OAuth ve sipariş senkronizasyonunu çalıştırın, ardından bu tablo otomatik dolacaktır.
           </p>

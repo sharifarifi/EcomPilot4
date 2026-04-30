@@ -1,4 +1,4 @@
-import { query, orderBy, where } from 'firebase/firestore';
+import { query, where } from 'firebase/firestore';
 import {
   FIRESTORE_PATHS,
   collectionRef,
@@ -42,11 +42,31 @@ const mapShopifyOrderSnapshot = (document) => {
   };
 };
 
-export const subscribeToShopifyOrders = (callback) => {
+const normalizeTimestamp = (value) => {
+  if (!value) return 0;
+  const parsed = new Date(toIsoDate(value) || value).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const sortOrders = (orders = []) => (
+  [...orders].sort((a, b) => {
+    const left = normalizeTimestamp(a.createdAtShopify || a.createdAt);
+    const right = normalizeTimestamp(b.createdAtShopify || b.createdAt);
+    return right - left;
+  })
+);
+
+export const subscribeToShopifyOrders = (callback, onError) => {
   const shopifyOrdersQuery = query(
     collectionRef(SHOPIFY_ORDERS_COLLECTION),
-    where('shopDomain', '==', SHOP_DOMAIN),
-    orderBy('created_at', 'desc')
+    where('shopDomain', '==', SHOP_DOMAIN)
   );
-  return subscribeToQuery(SERVICE_NAME, 'subscribeToShopifyOrders', shopifyOrdersQuery, callback, mapShopifyOrderSnapshot);
+  return subscribeToQuery(
+    SERVICE_NAME,
+    'subscribeToShopifyOrders',
+    shopifyOrdersQuery,
+    (items) => callback(sortOrders(items)),
+    mapShopifyOrderSnapshot,
+    onError
+  );
 };

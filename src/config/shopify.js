@@ -26,12 +26,13 @@ const getDerivedFunctionsBaseUrl = () => {
     return sameOriginApi;
   }
 
-  if (/vercel\.app$/i.test(new URL(origin).hostname)) {
-    return sameOriginApi;
-  }
-
   if (projectId) {
     return `https://us-central1-${projectId}.cloudfunctions.net`;
+  }
+
+  if (/vercel\.app$/i.test(new URL(origin).hostname)) {
+    console.warn('VITE_SHOPIFY_FUNCTIONS_BASE_URL eksik. Vercel ortamında varsayılan /api/shopify endpointi deneniyor.');
+    return sameOriginApi;
   }
 
   return sameOriginApi;

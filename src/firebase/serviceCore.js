@@ -50,11 +50,16 @@ export const mapSnapshotDocs = (snapshot, mapDoc = (document) => ({ id: document
   snapshot.docs.map(mapDoc)
 );
 
-export const subscribeToQuery = (service, action, queryRef, callback, mapDoc) => {
+export const subscribeToQuery = (service, action, queryRef, callback, mapDoc, onError) => {
   return onSnapshot(
     queryRef,
     (snapshot) => callback(mapSnapshotDocs(snapshot, mapDoc)),
-    (error) => logServiceError(service, action, error)
+    (error) => {
+      logServiceError(service, action, error);
+      if (typeof onError === 'function') {
+        onError(error);
+      }
+    }
   );
 };
 

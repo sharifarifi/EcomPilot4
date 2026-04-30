@@ -31,16 +31,26 @@ const manualSync = async (req, res) => {
         const batch = firebaseAdmin_js_1.adminDb.batch();
         orders.forEach((order) => {
             const orderRef = firebaseAdmin_js_1.adminDb.collection('shopify_orders').doc(String(order.id));
+            const customerName = order.customer ? `${order.customer.first_name || ''} ${order.customer.last_name || ''}`.trim() : 'Müşteri Bilgisi Yok';
             batch.set(orderRef, {
                 order_id: order.id,
+                shopifyOrderId: String(order.id),
                 order_number: order.name,
+                orderName: order.name,
                 total_price: order.total_price,
+                totalPrice: Number(order.total_price || 0),
                 currency: order.currency,
-                customer: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Müşteri Bilgisi Yok',
+                customer: customerName,
+                customerName,
+                email: order.customer?.email || '',
                 created_at: order.created_at,
+                createdAt: order.created_at,
                 financial_status: order.financial_status,
+                financialStatus: order.financial_status,
                 fulfillment_status: order.fulfillment_status || 'unfulfilled',
+                fulfillmentStatus: order.fulfillment_status || 'unfulfilled',
                 shopDomain: SHOP_DOMAIN,
+                syncedAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             }, { merge: true });
         });
