@@ -5,8 +5,34 @@ import { manualSync } from './handlers/manualSync.js';
 import { startInstall } from './handlers/startInstall.js';
 import { webhookReceiver } from './handlers/webhookReceiver.js';
 
-export const shopifyStartInstall = onRequest({ cors: true }, startInstall);
-export const shopifyAuthCallback = onRequest(authCallback);
-export const shopifyWebhookReceiver = onRequest({ cors: false }, webhookReceiver);
-export const shopifyManualSync = onRequest(manualSync);
-export const shopifyConnectionTest = onRequest({ cors: true }, connectionTest);
+/**
+ * TypeScript Hatalarını Gidermek İçin Sarıcı (Wrapper) Yapısı:
+ * onRequest içindeki fonksiyonların dönüş tipi void | Promise<void> olmalıdır.
+ * Handler fonksiyonlarını async/await ile çağırarak bu uyumluluğu sağlıyoruz.
+ */
+
+export const shopifyStartInstall = onRequest({ 
+    cors: true 
+}, async (req, res) => {
+    await startInstall(req, res);
+});
+
+export const shopifyAuthCallback = onRequest(async (req, res) => {
+    await authCallback(req, res);
+});
+
+export const shopifyWebhookReceiver = onRequest({ 
+    cors: false 
+}, async (req, res) => {
+    await webhookReceiver(req, res);
+});
+
+export const shopifyManualSync = onRequest(async (req, res) => {
+    await manualSync(req, res);
+});
+
+export const shopifyConnectionTest = onRequest({ 
+    cors: true 
+}, async (req, res) => {
+    await connectionTest(req, res);
+});

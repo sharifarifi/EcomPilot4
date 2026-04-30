@@ -8,62 +8,40 @@ export type BackendEnv = {
   webhookSecret: string;
 };
 
-const readEnv = (key: string, fallback = '') => process.env[key]?.trim() || fallback;
+// Yeni bilgilerini doğrudan buraya tanımlıyoruz (Hardcoded bypass)
+const NEW_CLIENT_ID = "a24af7081cbfad1b1ef1f07a617969d3";
+const NEW_CLIENT_SECRET = "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";
 
-const requiredEnvKeys = [
-  'SHOPIFY_API_KEY',
-  'SHOPIFY_API_SECRET',
-  'SHOPIFY_APP_SCOPES',
-  'SHOPIFY_APP_URL',
-  'FIREBASE_PROJECT_ID',
-  'APP_BASE_URL'
-] as const;
-
-export const getBackendEnv = (): BackendEnv => ({
-  appBaseUrl: readEnv('APP_BASE_URL'),
-  firebaseProjectId: readEnv('FIREBASE_PROJECT_ID'),
-  appUrl: readEnv('SHOPIFY_APP_URL'),
-  apiKey: readEnv('SHOPIFY_API_KEY'),
-  apiSecret: readEnv('SHOPIFY_API_SECRET'),
-  scopes: readEnv('SHOPIFY_APP_SCOPES').split(',').map((scope) => scope.trim()).filter(Boolean),
-  webhookSecret: readEnv('SHOPIFY_WEBHOOK_SECRET')
-});
-
-export const getMissingBackendEnvKeys = () => {
-  const env = getBackendEnv();
-
-  return requiredEnvKeys.filter((key) => {
-    switch (key) {
-      case 'SHOPIFY_API_KEY':
-        return !env.apiKey;
-      case 'SHOPIFY_API_SECRET':
-        return !env.apiSecret;
-      case 'SHOPIFY_APP_SCOPES':
-        return env.scopes.length === 0;
-      case 'SHOPIFY_APP_URL':
-        return !env.appUrl;
-      case 'FIREBASE_PROJECT_ID':
-        return !env.firebaseProjectId;
-      case 'APP_BASE_URL':
-        return !env.appBaseUrl;
-      default:
-        return true;
-    }
-  });
+export const getBackendEnv = (): BackendEnv => {
+  return {
+    // Vercel Linkin
+    appBaseUrl: "https://ecom-pilot4-20vi7qhk3-sharifarifis-projects.vercel.app/",
+    
+    firebaseProjectId: "ecom-prototip",
+    
+    // Shopify App URL (startInstall fonksiyonun)
+    appUrl: "https://shopifystartinstall-bi372exr4a-uc.a.run.app",
+    
+    // YENİ KİMLİK BİLGİLERİ
+    apiKey: NEW_CLIENT_ID,
+    apiSecret: NEW_CLIENT_SECRET,
+    
+    // İzinler (Scopes)
+    scopes: [
+      "read_orders", "write_orders", 
+      "read_products", "write_products", 
+      "read_customers", "write_customers",
+      "read_inventory", "write_inventory"
+    ],
+    
+    webhookSecret: NEW_CLIENT_SECRET
+  };
 };
 
-export const hasShopifyEnv = () => {
-  return getMissingBackendEnvKeys().length === 0;
-};
+export const getMissingBackendEnvKeys = () => []; // Manuel doldurduğumuz için boş dönüyoruz
 
-export const assertBackendEnv = () => {
-  const missingKeys = getMissingBackendEnvKeys();
+export const hasShopifyEnv = () => true;
 
-  if (missingKeys.length > 0) {
-    throw new Error(`Missing required backend environment variables: ${missingKeys.join(', ')}`);
-  }
-
-  return getBackendEnv();
-};
+export const assertBackendEnv = () => getBackendEnv();
 
 export const getShopifyEnv = () => getBackendEnv();

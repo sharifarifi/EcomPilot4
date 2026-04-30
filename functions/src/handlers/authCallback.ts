@@ -9,100 +9,63 @@ import {
   verifyCallbackHmac
 } from '../shopify/shopifyAuth.js';
 
-const buildReturnUrl = (returnTo: string, status: string, shop: string) => {
-  const { appBaseUrl } = getBackendEnv();
-  const base = appBaseUrl.replace(/\/$/, '');
-  const normalizedReturnTo = returnTo.startsWith('/') ? returnTo : `/${returnTo}`;
-  const nextUrl = new URL(`${base}${normalizedReturnTo}`);
-  nextUrl.searchParams.set('shopify', status);
-  nextUrl.searchParams.set('shop', shop);
-  return nextUrl.toString();
-};
-
 export const authCallback = async (req: Request, res: Response) => {
   const params = new URLSearchParams(req.query as Record<string, string>);
   const shop = normalizeShopDomain(String(req.query.shop || '').trim());
   const code = String(req.query.code || '').trim();
   const state = String(req.query.state || '').trim();
 
+  // 1. Temel Parametre Kontrolü
   if (!shop || !code || !state || !isValidShopDomain(shop)) {
-    res.status(400).json({ error: 'Missing or invalid callback parameters.' });
-    return;
+    return res.status(400).json({ error: 'Missing callback parameters.' });
   }
 
+  // 2. Güvenlik Kontrolü (HMAC)
   if (!verifyCallbackHmac(params)) {
-    res.status(400).json({ error: 'Invalid Shopify callback signature.' });
-    return;
+    return res.status(400).json({ error: 'Invalid Shopify signature.' });
   }
 
+  // 3. Session Kontrolü (Güvenlik için yükleme oturumunu doğrula)
   const stateHash = hashInstallState(state);
   const installSessionRef = adminDb.collection('shopify_install_sessions').doc(stateHash);
   const installSession = await installSessionRef.get();
 
   if (!installSession.exists) {
-    res.status(400).json({ error: 'Invalid or expired install state.' });
-    return;
+    return res.status(400).json({ error: 'Invalid install state.' });
   }
-
-  const installSessionData = installSession.data();
-  const returnTo = String(installSessionData?.returnTo || '/?shopify=oauth');
-  if (installSessionData?.shopDomain && installSessionData.shopDomain !== shop) {
-    res.status(400).json({ error: 'Install state does not match requested shop.' });
-    return;
-  }
-
-  let grantedScopes: string[] = [];
-  let tokenExchangeStatus: 'skipped' | 'succeeded' | 'failed' = 'skipped';
-  let callbackMessage = 'Callback alındı. Güvenli metadata kaydedildi.';
 
   try {
+    // 4. Shopify'dan Access Token'ı al (En kritik adım)
     const tokenResponse = await exchangeAccessToken(shop, code);
-    grantedScopes = tokenResponse.scope.split(',').map((scope) => scope.trim()).filter(Boolean);
-    tokenExchangeStatus = tokenResponse.accessToken ? 'succeeded' : 'failed';
-    callbackMessage = tokenResponse.accessToken
-      ? 'OAuth callback tamamlandı. Access token alındı ancak bu iskelet sürümünde saklanmadı.'
-      : 'OAuth callback tamamlandı ancak access token dönmedi.';
-  } catch (error) {
-    tokenExchangeStatus = 'failed';
-    callbackMessage = error instanceof Error ? error.message : 'Token exchange başarısız oldu.';
-  }
+    const updatedAt = new Date().toISOString();
 
-  const updatedAt = new Date().toISOString();
-  const isConnected = tokenExchangeStatus === 'succeeded';
-  const connectionState = isConnected ? 'connected' : 'pending_secure_storage';
-
-  await adminDb.collection('shopify_stores').doc(shop).set({
-    shopDomain: shop,
-    connectionState,
-    connected: isConnected,
-    grantedScopes,
-    authCodeReceivedAt: updatedAt,
-    tokenExchangeStatus,
-    updatedAt,
-    lastError: tokenExchangeStatus === 'failed' ? callbackMessage : null,
-    note: isConnected
-      ? 'Access token bu iskelet sürümünde Firestore plaintext olarak saklanmaz.'
-      : 'TODO: Güvenli token saklama katmanı henüz implement edilmedi.'
-  }, { merge: true });
-
-  await adminDb.collection('settings').doc('integrations').set({
-    1: {
-      connected: isConnected,
-      connectionState,
-      status: isConnected ? 'connected' : 'pending',
+    // 5. Veritabanına Kaydet (Eksik olan kısım burasıydı)
+    await adminDb.collection('shopify_stores').doc(shop).set({
       shopDomain: shop,
-      grantedScopes,
-      lastError: tokenExchangeStatus === 'failed' ? callbackMessage : null,
-      updatedAt,
-      authCodeReceivedAt: updatedAt,
-    }
-  }, { merge: true });
+      accessToken: tokenResponse.accessToken, // Anahtarı buraya kaydediyoruz
+      scopes: tokenResponse.scope,
+      status: 'active',
+      isConnected: true,
+      updatedAt
+    }, { merge: true });
 
-  await installSessionRef.set({
-    status: tokenExchangeStatus,
-    completedAt: updatedAt,
-    shopDomain: shop
-  }, { merge: true });
+    // Panel ayarlarını güncelle
+    await adminDb.collection('settings').doc('integrations').set({
+      shopify: {
+        connected: true,
+        shopDomain: shop,
+        updatedAt
+      }
+    }, { merge: true });
 
-  res.redirect(buildReturnUrl(returnTo, tokenExchangeStatus, shop));
+    // 6. Oturumu temizle ve yönlendir
+    await installSessionRef.update({ status: 'succeeded', completedAt: updatedAt });
+
+    const { appBaseUrl } = getBackendEnv();
+    res.redirect(`${appBaseUrl.replace(/\/$/, '')}/?shopify=succeeded&shop=${shop}`);
+
+  } catch (error: any) {
+    console.error("❌ Auth Hatası:", error.message);
+    res.status(500).json({ error: 'Token exchange failed', details: error.message });
+  }
 };

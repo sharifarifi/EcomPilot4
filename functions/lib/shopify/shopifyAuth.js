@@ -16,9 +16,13 @@ const normalizeShopDomain = (shop) => (shop
 exports.normalizeShopDomain = normalizeShopDomain;
 const isValidShopDomain = (shop) => /\.myshopify\.com$/.test((0, exports.normalizeShopDomain)(shop));
 exports.isValidShopDomain = isValidShopDomain;
+/**
+ * HATA ÇÖZÜMÜ: Shopify Partner Dashboard'daki Whitelist ile
+ * %100 eşleşmesi için callback URL'ini sabitliyoruz.
+ */
 const buildCallbackUrl = () => {
-    const env = (0, env_js_1.getShopifyEnv)();
-    return `${env.appUrl.replace(/\/$/, '')}/shopifyAuthCallback`;
+    // Manuel olarak Whitelist'e eklediğimiz adresi buraya sabit yazıyoruz
+    return "https://shopifyauthcallback-bi372exr4a-uc.a.run.app";
 };
 exports.buildCallbackUrl = buildCallbackUrl;
 const buildInstallUrl = (shop, state) => {
@@ -35,6 +39,9 @@ const buildInstallUrl = (shop, state) => {
 exports.buildInstallUrl = buildInstallUrl;
 const hashInstallState = (state) => node_crypto_1.default.createHash('sha256').update(state).digest('hex');
 exports.hashInstallState = hashInstallState;
+/**
+ * Shopify'dan gelen callback isteğinin güvenliğini (HMAC) kontrol eder.
+ */
 const verifyCallbackHmac = (params) => {
     const { apiSecret } = (0, env_js_1.getShopifyEnv)();
     const providedHmac = params.get('hmac');
@@ -46,10 +53,15 @@ const verifyCallbackHmac = (params) => {
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([key, value]) => `${key}=${value}`)
         .join('&');
-    const digest = node_crypto_1.default.createHmac('sha256', apiSecret).update(message, 'utf8').digest('hex');
-    return digest.length === providedHmac.length && node_crypto_1.default.timingSafeEqual(Buffer.from(digest), Buffer.from(providedHmac));
+    const digest = node_crypto_1.default.createHmac('sha256', apiSecret)
+        .update(message, 'utf8')
+        .digest('hex');
+    return node_crypto_1.default.timingSafeEqual(Buffer.from(digest), Buffer.from(providedHmac));
 };
 exports.verifyCallbackHmac = verifyCallbackHmac;
+/**
+ * Geçici kodu (code) kalıcı Access Token ile değiştirir.
+ */
 const exchangeAccessToken = async (shop, code) => {
     const env = (0, env_js_1.getShopifyEnv)();
     const response = await fetch(`https://${shop}/admin/oauth/access_token`, {
@@ -64,7 +76,8 @@ const exchangeAccessToken = async (shop, code) => {
         })
     });
     if (!response.ok) {
-        throw new Error(`Shopify token exchange failed with status ${response.status}`);
+        const errorData = await response.text();
+        throw new Error(`Shopify token exchange failed (${response.status}): ${errorData}`);
     }
     const payload = await response.json();
     return {
