@@ -63,7 +63,7 @@ const MainApp = () => {
   const [isPlanningOpen, setIsPlanningOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isCommissionOpen, setIsCommissionOpen] = useState(false);
-  const [isShopifyOpen, setIsShopifyOpen] = useState(true); // Shopify menüsünü varsayılan açık yapalım
+  const [isShopifyOpen, setIsShopifyOpen] = useState(false);
   
   const [startDate, setStartDate] = useState('2026-01-01');
   const [endDate, setEndDate] = useState('2026-01-31');
@@ -113,7 +113,7 @@ const MainApp = () => {
     <div className="flex h-screen bg-slate-50 font-sans text-slate-800">
       
       {/* SIDEBAR */}
-      <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-2xl transition-all flex-shrink-0 z-20 overflow-hidden">
+      <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-2xl transition-all flex-shrink-0 z-20">
         <div className="p-6 text-2xl font-bold tracking-tighter text-blue-400 flex items-center gap-2">
           E-ComPilot
         </div>
@@ -188,17 +188,16 @@ const MainApp = () => {
             )}
           </div>
 
-          {/* SHOPIFY MENÜSÜ */}
           <div className="pt-1">
             <button onClick={() => setIsShopifyOpen(!isShopifyOpen)} className="flex items-center justify-between w-full px-4 py-3 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all">
-              <div className="flex items-center gap-3"><Store size={20}/><span className="font-medium">Shopify Entegrasyonu</span></div>
+              <div className="flex items-center gap-3"><Store size={20}/><span className="font-medium">Shopify</span></div>
               {isShopifyOpen ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}
             </button>
             {isShopifyOpen && (
               <div className="ml-4 mt-1 space-y-1 border-l border-slate-700 pl-2">
-                 <SidebarSubItem icon={<ClipboardList size={18}/>} label="Siparişler" active={activeTab === 'shopify-orders'} onClick={() => setActiveTab('shopify-orders')}/>
-                 <SidebarSubItem icon={<Package size={18}/>} label="Ürün Yönetimi" active={activeTab === 'shopify-products'} onClick={() => setActiveTab('shopify-products')}/>
-                 <SidebarSubItem icon={<ShieldAlert size={18}/>} label="Entegrasyon Durumu" active={activeTab === 'integration-health'} onClick={() => setActiveTab('integration-health')}/>
+                 <SidebarSubItem icon={<ClipboardList size={18}/>} label="Shopify Orders" active={activeTab === 'shopify-orders'} onClick={() => setActiveTab('shopify-orders')}/>
+                 <SidebarSubItem icon={<Package size={18}/>} label="Shopify Products" active={activeTab === 'shopify-products'} onClick={() => setActiveTab('shopify-products')}/>
+                 <SidebarSubItem icon={<ShieldAlert size={18}/>} label="Integration Health" active={activeTab === 'integration-health'} onClick={() => setActiveTab('integration-health')}/>
               </div>
             )}
           </div>
@@ -216,18 +215,20 @@ const MainApp = () => {
       {/* MAIN CONTENT */}
       <main className="flex-1 overflow-y-auto p-8 bg-slate-50">
         
-        {/* HEADER */}
+        {/* HEADER: Başlık + Sağ Taraf */}
         <header className="mb-8 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-slate-800">{getTitle()}</h1>
             <p className="text-slate-500 mt-1">
               {activeTab === 'dashboard' ? 'Operasyonel süreçlerinizi buradan yönetin.' : 
-               activeTab === 'profile' ? 'Hesap bilgilerinizi güncelleyin.' : 
-               activeTab === 'shopify-orders' ? 'Shopify mağazanızdaki canlı siparişler.' : 'Detaylı yönetim paneli.'}
+               activeTab === 'profile' ? 'Hesap bilgilerinizi güncelleyin.' : 'Detaylı yönetim paneli.'}
             </p>
           </div>
           
+          {/* SAĞ TARAF: AKSİYONLAR */}
           <div className="flex flex-wrap items-center gap-3">
+            
+            {/* 1. TARİH SEÇİCİ (SOLDA) */}
             {['dashboard', 'reports-sales', 'reports-finance'].includes(activeTab) && (
               <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-3">
                 <div className="flex gap-1 border-r border-slate-200 pr-3">
@@ -254,32 +255,40 @@ const MainApp = () => {
                 </label>
               </div>
             )}
+
+            {/* 2. BİLDİRİM ZİLİ (SAĞDA) */}
             <NotificationBell />
+
           </div>
         </header>
 
         {/* --- SAYFA RENDER MANTIĞI --- */}
         
+        {/* PROFİL */}
         {activeTab === 'profile' && <Profile />}
 
+        {/* 1. DASHBOARD */}
         {activeTab === 'dashboard' && (
             hasPerm('dashboard') 
             ? <Dashboard startDate={startDate} endDate={endDate} compareMode={compareMode}/>
             : <AccessDeniedMessage title="Genel Bakış" message="Dashboard verilerini görüntüleme yetkiniz bulunmamaktadır."/>
         )}
 
+        {/* 2. PLANLAYICI */}
         {activeTab === 'planner' && (
             hasPerm('planner') 
             ? <ScenarioPlanner />
             : <AccessDeniedMessage title="Senaryo Planlayıcı" message="Bütçe planlama modülüne erişim yetkiniz yok."/>
         )}
         
+        {/* 3. OPERASYON YÖNETİMİ */}
         {['tasks', 'orders', 'shifts', 'leaves', 'daily-reports'].includes(activeTab) && (
             hasPerm(activeTab.replace('daily-reports', 'daily_reports')) 
             ? <OperationsManager view={activeTab === 'daily-reports' ? 'reports' : activeTab} />
             : <AccessDeniedMessage title="Operasyon Yönetimi" message="Bu operasyon modülüne erişim yetkiniz bulunmamaktadır."/>
         )}
 
+        {/* 4. PRİM SİSTEMİ */}
         {activeTab === 'commission-retail' && (
             hasPerm('retail') 
             ? <RetailCommission />
@@ -296,23 +305,24 @@ const MainApp = () => {
             : <AccessDeniedMessage title="Operasyon Primleri" message="Operasyon primlerine erişiminiz yok."/>
         )}
 
+        {/* 5. RAPORLAR */}
         {activeTab.startsWith('reports-') && (
             hasPerm('reports') 
             ? <ReportsManager view={activeTab} />
             : <AccessDeniedMessage title="Raporlar" message="Raporlama modülüne erişim yetkiniz bulunmamaktadır."/>
         )}
         
+        {/* 6. AYARLAR */}
         {activeTab === 'settings' && (
             hasPerm('settings') 
             ? <Settings />
             : <AccessDeniedMessage title="Ayarlar" message="Sistem ayarlarına sadece yöneticiler erişebilir."/>
         )}
 
-        {/* --- SHOPIFY SAYFALARI --- */}
         {activeTab === 'shopify-orders' && (
             hasPerm('settings')
             ? <ShopifyOrdersPage />
-            : <AccessDeniedMessage title="Shopify" message="Shopify siparişlerini görme yetkiniz yok."/>
+            : <AccessDeniedMessage title="Shopify" message="Shopify ve entegrasyon görünümüne erişim yetkiniz bulunmamaktadır."/>
         )}
 
         {['shopify-products', 'integration-health'].includes(activeTab) && (
@@ -372,6 +382,13 @@ const SidebarSubItem = ({ icon, label, active, onClick }) => (
   </button>
 );
 
+const FIREBASE_SETUP_STEPS = [
+  '1. Firebase Console / Project settings / Your apps / Web app config alanını açın.',
+  '2. Lokalinizde çalışan .env.local dosyası varsa aynı değerleri kopyalayın.',
+  '3. Vercel / Project Settings / Environment Variables bölümünde tüm VITE_FIREBASE_* değişkenlerini en az Production ortamına ekleyin.',
+  '4. Değişkenleri ekledikten sonra Redeploy çalıştırın; eski deployment bu değerleri sonradan otomatik almaz.',
+];
+
 const FirebaseConfigNotice = () => (
   <div className="min-h-screen bg-slate-50 px-6 py-10 flex items-center justify-center">
     <div className="w-full max-w-2xl rounded-3xl border border-amber-200 bg-white p-8 shadow-xl">
@@ -381,9 +398,18 @@ const FirebaseConfigNotice = () => (
       <h1 className="text-3xl font-bold text-slate-900 mb-3">Firebase ayarları eksik</h1>
       <p className="text-slate-600 mb-6 leading-7">
         Uygulama derlenmiş olsa da Firebase environment değişkenleri Vercel projesine eklenmediği için giriş ekranı başlatılamıyor.
+        Bu yüzden artık boş ekran yerine açıklayıcı bir kurulum ekranı gösteriyoruz.
       </p>
       <div className="rounded-2xl bg-slate-900 p-5 text-left text-sm text-slate-100 overflow-x-auto">
         <pre className="whitespace-pre-wrap font-mono">{firebaseEnvError}</pre>
+      </div>
+      <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-700">
+        <p className="mb-3 font-semibold">Vercel'de yapmanız gerekenler</p>
+        <div className="space-y-2">
+          {FIREBASE_SETUP_STEPS.map((step) => (
+            <p key={step}>{step}</p>
+          ))}
+        </div>
       </div>
     </div>
   </div>
