@@ -7,7 +7,7 @@ const NEW_CLIENT_SECRET = "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";
 const getBackendEnv = () => {
     return {
         // Vercel Linkin
-        appBaseUrl: "https://ecom-pilot4-mej9pmty9-sharifarifis-projects.vercel.app",
+        appBaseUrl: "https://ecom-pilot4-20vi7qhk3-sharifarifis-projects.vercel.app/",
         firebaseProjectId: "ecom-prototip",
         // Shopify App URL (startInstall fonksiyonun)
         appUrl: "https://shopifystartinstall-bi372exr4a-uc.a.run.app",

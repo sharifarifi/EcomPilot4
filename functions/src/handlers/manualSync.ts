@@ -2,11 +2,14 @@ import type { Request, Response } from 'express';
 import { adminDb } from '../config/firebaseAdmin.js';
 import axios from 'axios';
 
-export const manualSync = async (req: Request, res: Response): Promise<void | Response> => {
-  const shop = String(req.query.shop || '').trim();
+const SHOP_DOMAIN = 'z50nyc-dm.myshopify.com';
 
-  if (!shop) {
-    res.status(400).send('Shop domain gerekli.');
+export const manualSync = async (req: Request, res: Response): Promise<void> => {
+  const requestedShop = String(req.query.shop || '').trim().toLowerCase();
+  const shop = requestedShop || SHOP_DOMAIN;
+
+  if (shop !== SHOP_DOMAIN) {
+    res.status(400).send(`Geçersiz shop domain. Desteklenen domain: ${SHOP_DOMAIN}`);
     return;
   }
 
@@ -45,7 +48,7 @@ export const manualSync = async (req: Request, res: Response): Promise<void | Re
         created_at: order.created_at,
         financial_status: order.financial_status,
         fulfillment_status: order.fulfillment_status || 'unfulfilled',
-        shopDomain: shop,
+        shopDomain: SHOP_DOMAIN,
         updatedAt: new Date().toISOString()
       }, { merge: true });
     });
