@@ -6,10 +6,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.manualSync = void 0;
 const firebaseAdmin_js_1 = require("../config/firebaseAdmin.js");
 const axios_1 = __importDefault(require("axios"));
+const SHOP_DOMAIN = 'z50nyc-dm.myshopify.com';
 const manualSync = async (req, res) => {
-    const shop = String(req.query.shop || '').trim();
-    if (!shop) {
-        res.status(400).send('Shop domain gerekli.');
+    const requestedShop = String(req.query.shop || '').trim().toLowerCase();
+    const shop = requestedShop || SHOP_DOMAIN;
+    if (shop !== SHOP_DOMAIN) {
+        res.status(400).send(`Geçersiz shop domain. Desteklenen domain: ${SHOP_DOMAIN}`);
         return;
     }
     try {
@@ -38,7 +40,7 @@ const manualSync = async (req, res) => {
                 created_at: order.created_at,
                 financial_status: order.financial_status,
                 fulfillment_status: order.fulfillment_status || 'unfulfilled',
-                shopDomain: shop,
+                shopDomain: SHOP_DOMAIN,
                 updatedAt: new Date().toISOString()
             }, { merge: true });
         });
