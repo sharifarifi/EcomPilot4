@@ -182,6 +182,9 @@ const ShopifyOrdersPage = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
+      <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
+        <strong>Debug:</strong> orders.length={orders.length} | storeId={storeId || '—'} | ordersError={ordersError || '—'}
+      </div>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
