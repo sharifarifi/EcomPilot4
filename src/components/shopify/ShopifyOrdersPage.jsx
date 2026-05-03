@@ -3,6 +3,7 @@ import { AlertCircle, ClipboardList, Loader2, Package, RefreshCcw, ShoppingCart,
 import { subscribeToShopifyOrders } from '../../firebase/shopifyOrderService';
 import { subscribeToShopifyStore } from '../../firebase/shopifyStoreService';
 import { normalizeShopDomain, shopifyConfig } from '../../config/shopify';
+import { firebaseConfig } from '../../firebase/firebaseConfig';
 
 const moneyFormatter = new Intl.NumberFormat('tr-TR', {
   style: 'currency',
@@ -57,25 +58,24 @@ const ShopifyOrdersPage = () => {
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [isLoadingStore, setIsLoadingStore] = useState(true);
   const [ordersError, setOrdersError] = useState('');
-  const [ordersDebug, setOrdersDebug] = useState(null);
+  const [debugInfo, setDebugInfo] = useState({
+    collectionName: 'shopify_orders',
+    primaryQuerySize: 0,
+    fallbackQuerySize: 0,
+    finalOrdersLength: 0,
+    firstOrderSample: null,
+  });
 
   const activeShopDomain = useMemo(() => {
-    if (typeof window === 'undefined') {
-      return normalizeShopDomain(shopifyConfig.defaultShopDomain);
-    }
-
-    const fromUrl = normalizeShopDomain(new URLSearchParams(window.location.search).get('shop') || '');
-    return fromUrl || normalizeShopDomain(shopifyConfig.defaultShopDomain);
+    const params = new URLSearchParams(window.location.search);
+    return normalizeShopDomain(params.get('shop') || shopifyConfig.defaultShopDomain);
   }, []);
 
-  const storeId = useMemo(() => activeShopDomain, [activeShopDomain]);
+  const storeId = activeShopDomain;
 
   useEffect(() => {
     const unsubscribe = subscribeToShopifyOrders(
-      {
-        shopDomain: activeShopDomain,
-        onDebug: (debugInfo) => setOrdersDebug(debugInfo),
-      },
+      activeShopDomain,
       (nextOrders) => {
         setOrders(Array.isArray(nextOrders) ? nextOrders : []);
         setOrdersError('');
@@ -85,6 +85,9 @@ const ShopifyOrdersPage = () => {
         console.error('Shopify siparişleri dinlenirken hata oluştu:', error);
         setOrdersError('Shopify siparişleri yüklenirken bir hata oluştu.');
         setIsLoadingOrders(false);
+      },
+      (nextDebug) => {
+        setDebugInfo((prev) => ({ ...prev, ...nextDebug }));
       }
     );
 
@@ -194,15 +197,7 @@ const ShopifyOrdersPage = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-        <strong>Debug:</strong> orders.length={orders.length} | storeId={storeId || '—'} | ordersError={ordersError || '—'}
-        <div className="mt-1 text-[11px] text-slate-500">
-          activeShopDomain={ordersDebug?.activeShopDomain || activeShopDomain || '—'} | firebaseProjectId={import.meta.env.VITE_FIREBASE_PROJECT_ID || '—'} |
-          collectionName={ordersDebug?.collectionName || 'shopify_orders'} | primaryQuerySize={ordersDebug?.primaryQuerySize ?? 0} |
-          fallbackQuerySize={ordersDebug?.fallbackQuerySize ?? 0} | finalOrdersLength={ordersDebug?.finalOrdersLength ?? orders.length}
-        </div>
-        <div className="mt-1 truncate text-[11px] text-slate-400">
-          firstOrderSample={ordersDebug?.firstOrderSample ? JSON.stringify(ordersDebug.firstOrderSample) : '—'}
-        </div>
+        <strong>Debug:</strong> activeShopDomain={activeShopDomain || '—'} | firebaseProjectId={firebaseConfig.projectId || '—'} | collectionName={debugInfo.collectionName} | primaryQuerySize={debugInfo.primaryQuerySize} | fallbackQuerySize={debugInfo.fallbackQuerySize} | finalOrdersLength={debugInfo.finalOrdersLength} | firstOrderSample={debugInfo.firstOrderSample ? JSON.stringify({ id: debugInfo.firstOrderSample.id, shopDomain: debugInfo.firstOrderSample.shopDomain, storeId: debugInfo.firstOrderSample.storeId, orderName: debugInfo.firstOrderSample.orderName }) : '—'} | ordersError={ordersError || '—'}
       </div>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
