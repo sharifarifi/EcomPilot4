@@ -66,10 +66,16 @@ const ShopifyOrdersPage = () => {
     return normalizeShopDomain(urlShop || shopifyConfig.defaultShopDomain);
   }, []);
 
-  const storeId = useMemo(
-    () => normalizeShopDomain(shopifyConfig.defaultShopDomain),
-    []
-  );
+  const activeShopDomain = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return normalizeShopDomain(shopifyConfig.defaultShopDomain);
+    }
+
+    const fromUrl = normalizeShopDomain(new URLSearchParams(window.location.search).get('shop') || '');
+    return fromUrl || normalizeShopDomain(shopifyConfig.defaultShopDomain);
+  }, []);
+
+  const storeId = useMemo(() => activeShopDomain, [activeShopDomain]);
 
   useEffect(() => {
     const unsubscribe = subscribeToShopifyOrders(
