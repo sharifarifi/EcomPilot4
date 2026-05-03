@@ -2,11 +2,14 @@ import type { Request, Response } from 'express';
 import { adminDb } from '../config/firebaseAdmin.js';
 import axios from 'axios';
 
-export const manualSync = async (req: Request, res: Response): Promise<void | Response> => {
-  const shop = String(req.query.shop || '').trim();
+const SHOP_DOMAIN = 'z50nyc-dm.myshopify.com';
 
-  if (!shop) {
-    res.status(400).send('Shop domain gerekli.');
+export const manualSync = async (req: Request, res: Response): Promise<void> => {
+  const requestedShop = String(req.query.shop || '').trim().toLowerCase();
+  const shop = requestedShop || SHOP_DOMAIN;
+
+  if (shop !== SHOP_DOMAIN) {
+    res.status(400).send(`Geçersiz shop domain. Desteklenen domain: ${SHOP_DOMAIN}`);
     return;
   }
 
@@ -36,16 +39,26 @@ export const manualSync = async (req: Request, res: Response): Promise<void | Re
 
     orders.forEach((order: any) => {
       const orderRef = adminDb.collection('shopify_orders').doc(String(order.id));
+      const customerName = order.customer ? `${order.customer.first_name || ''} ${order.customer.last_name || ''}`.trim() : 'Müşteri Bilgisi Yok';
       batch.set(orderRef, {
         order_id: order.id,
+        shopifyOrderId: String(order.id),
         order_number: order.name,
+        orderName: order.name,
         total_price: order.total_price,
+        totalPrice: Number(order.total_price || 0),
         currency: order.currency,
-        customer: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Müşteri Bilgisi Yok',
+        customer: customerName,
+        customerName,
+        email: order.customer?.email || '',
         created_at: order.created_at,
+        createdAt: order.created_at,
         financial_status: order.financial_status,
+        financialStatus: order.financial_status,
         fulfillment_status: order.fulfillment_status || 'unfulfilled',
-        shopDomain: shop,
+        fulfillmentStatus: order.fulfillment_status || 'unfulfilled',
+        shopDomain: SHOP_DOMAIN,
+        syncedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }, { merge: true });
     });
