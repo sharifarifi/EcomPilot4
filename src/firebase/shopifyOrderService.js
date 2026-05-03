@@ -9,7 +9,6 @@ import { normalizeShopDomain } from '../config/shopify';
 
 const SERVICE_NAME = 'shopifyOrderService';
 const SHOPIFY_ORDERS_COLLECTION = FIRESTORE_PATHS.shopifyOrders;
-const SHOP_DOMAIN = 'z50nyc-dm.myshopify.com';
 
 const toIsoDate = (value) => {
   if (!value) return null;
@@ -29,7 +28,7 @@ const mapShopifyOrderSnapshot = (document) => {
   return {
     id: document.id,
     ...data,
-    shopDomain: data.shopDomain || SHOP_DOMAIN,
+    shopDomain: normalizeShopDomain(data.shopDomain || data.storeDomain || data.domain || data.shop || ''),
     shopifyOrderId: data.shopifyOrderId || data.shopify_order_id || String(data.order_id || ''),
     orderName: data.orderName || data.order_number || data.name || '',
     totalPrice: data.totalPrice ?? data.total_price ?? 0,
@@ -39,7 +38,7 @@ const mapShopifyOrderSnapshot = (document) => {
     createdAtShopify: data.createdAtShopify || data.created_at || data.createdAt || null,
     createdAt: toIsoDate(data.createdAt) || data.created_at || null,
     updatedAt: toIsoDate(data.updatedAt) || data.updatedAt || null,
-    storeId: data.storeId || data.shopDomain || data.storeDomain || data.domain || data.shop || SHOP_DOMAIN,
+    storeId: normalizeShopDomain(data.storeId || data.shopDomain || data.storeDomain || data.domain || data.shop || ''),
     customer: {
       firstName: customerFirstName,
       lastName: customerLastName,
@@ -69,8 +68,13 @@ const resolveDomainFromOrder = (order) => (
   )
 );
 
-export const subscribeToShopifyOrders = (callback, onError) => {
-  const expectedDomain = normalizeShopDomain(SHOP_DOMAIN);
+export const subscribeToShopifyOrders = (
+  shopDomain,
+  callback,
+  onError,
+  onDebug
+) => {
+  const expectedDomain = normalizeShopDomain(shopDomain || '');
   const shopifyOrdersQuery = query(
     collectionRef(SHOPIFY_ORDERS_COLLECTION),
     where('shopDomain', '==', expectedDomain)
@@ -88,13 +92,23 @@ export const subscribeToShopifyOrders = (callback, onError) => {
     (snapshot) => {
       const mapped = mapSnapshotDocs(snapshot, mapShopifyOrderSnapshot);
       console.info('[shopifyOrderService] Shopify orders primary query size:', mapped.length);
+      onDebug?.({
+        collectionName: SHOPIFY_ORDERS_COLLECTION,
+        primaryQuerySize: mapped.length,
+      });
 
       if (mapped.length > 0) {
         if (fallbackUnsubscribe) {
           fallbackUnsubscribe();
           fallbackUnsubscribe = null;
         }
-        callback(sortOrders(mapped));
+        const sorted = sortOrders(mapped);
+        onDebug?.({
+          fallbackQuerySize: 0,
+          finalOrdersLength: sorted.length,
+          firstOrderSample: sorted[0] || null,
+        });
+        callback(sorted);
         return;
       }
 
@@ -117,7 +131,13 @@ export const subscribeToShopifyOrders = (callback, onError) => {
             );
 
             const filtered = fallbackMapped.filter((order) => resolveDomainFromOrder(order) === expectedDomain);
-            callback(sortOrders(filtered));
+            const sorted = sortOrders(filtered);
+            onDebug?.({
+              fallbackQuerySize: fallbackMapped.length,
+              finalOrdersLength: sorted.length,
+              firstOrderSample: sorted[0] || null,
+            });
+            callback(sorted);
           },
           (error) => {
             logServiceError(SERVICE_NAME, 'subscribeToShopifyOrders:fallback', error);

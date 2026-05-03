@@ -3,6 +3,7 @@ import { AlertCircle, ClipboardList, Loader2, Package, RefreshCcw, ShoppingCart,
 import { subscribeToShopifyOrders } from '../../firebase/shopifyOrderService';
 import { subscribeToShopifyStore } from '../../firebase/shopifyStoreService';
 import { normalizeShopDomain, shopifyConfig } from '../../config/shopify';
+import { firebaseConfig } from '../../firebase/firebaseConfig';
 
 const moneyFormatter = new Intl.NumberFormat('tr-TR', {
   style: 'currency',
@@ -57,14 +58,24 @@ const ShopifyOrdersPage = () => {
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [isLoadingStore, setIsLoadingStore] = useState(true);
   const [ordersError, setOrdersError] = useState('');
+  const [debugInfo, setDebugInfo] = useState({
+    collectionName: 'shopify_orders',
+    primaryQuerySize: 0,
+    fallbackQuerySize: 0,
+    finalOrdersLength: 0,
+    firstOrderSample: null,
+  });
 
-  const storeId = useMemo(
-    () => normalizeShopDomain(shopifyConfig.defaultShopDomain),
-    []
-  );
+  const activeShopDomain = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return normalizeShopDomain(params.get('shop') || shopifyConfig.defaultShopDomain);
+  }, []);
+
+  const storeId = activeShopDomain;
 
   useEffect(() => {
     const unsubscribe = subscribeToShopifyOrders(
+      activeShopDomain,
       (nextOrders) => {
         setOrders(Array.isArray(nextOrders) ? nextOrders : []);
         setOrdersError('');
@@ -74,11 +85,14 @@ const ShopifyOrdersPage = () => {
         console.error('Shopify siparişleri dinlenirken hata oluştu:', error);
         setOrdersError('Shopify siparişleri yüklenirken bir hata oluştu.');
         setIsLoadingOrders(false);
+      },
+      (nextDebug) => {
+        setDebugInfo((prev) => ({ ...prev, ...nextDebug }));
       }
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [activeShopDomain]);
 
   useEffect(() => {
     const unsubscribe = subscribeToShopifyStore(storeId, (nextStore) => {
@@ -183,7 +197,7 @@ const ShopifyOrdersPage = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-        <strong>Debug:</strong> orders.length={orders.length} | storeId={storeId || '—'} | ordersError={ordersError || '—'}
+        <strong>Debug:</strong> activeShopDomain={activeShopDomain || '—'} | firebaseProjectId={firebaseConfig.projectId || '—'} | collectionName={debugInfo.collectionName} | primaryQuerySize={debugInfo.primaryQuerySize} | fallbackQuerySize={debugInfo.fallbackQuerySize} | finalOrdersLength={debugInfo.finalOrdersLength} | firstOrderSample={debugInfo.firstOrderSample ? JSON.stringify({ id: debugInfo.firstOrderSample.id, shopDomain: debugInfo.firstOrderSample.shopDomain, storeId: debugInfo.firstOrderSample.storeId, orderName: debugInfo.firstOrderSample.orderName }) : '—'} | ordersError={ordersError || '—'}
       </div>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
