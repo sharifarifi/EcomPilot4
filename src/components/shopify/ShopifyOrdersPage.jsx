@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, ClipboardList, Loader2, Package, RefreshCcw, ShoppingCart, Store, Wallet } from 'lucide-react';
+import { firebaseConfig } from '../../firebase/firebaseConfig';
 import { subscribeToShopifyOrders } from '../../firebase/shopifyOrderService';
 import { subscribeToShopifyStore } from '../../firebase/shopifyStoreService';
 import { normalizeShopDomain, shopifyConfig } from '../../config/shopify';
@@ -57,6 +58,13 @@ const ShopifyOrdersPage = () => {
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [isLoadingStore, setIsLoadingStore] = useState(true);
   const [ordersError, setOrdersError] = useState('');
+  const [ordersDebug, setOrdersDebug] = useState({});
+
+  const activeShopDomain = useMemo(() => {
+    if (typeof window === 'undefined') return normalizeShopDomain(shopifyConfig.defaultShopDomain);
+    const urlShop = new URLSearchParams(window.location.search).get('shop');
+    return normalizeShopDomain(urlShop || shopifyConfig.defaultShopDomain);
+  }, []);
 
   const storeId = useMemo(
     () => normalizeShopDomain(shopifyConfig.defaultShopDomain),
@@ -65,6 +73,7 @@ const ShopifyOrdersPage = () => {
 
   useEffect(() => {
     const unsubscribe = subscribeToShopifyOrders(
+      activeShopDomain,
       (nextOrders) => {
         setOrders(Array.isArray(nextOrders) ? nextOrders : []);
         setOrdersError('');
@@ -74,11 +83,12 @@ const ShopifyOrdersPage = () => {
         console.error('Shopify siparişleri dinlenirken hata oluştu:', error);
         setOrdersError('Shopify siparişleri yüklenirken bir hata oluştu.');
         setIsLoadingOrders(false);
-      }
+      },
+      (debugInfo) => setOrdersDebug(debugInfo || {})
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [activeShopDomain]);
 
   useEffect(() => {
     const unsubscribe = subscribeToShopifyStore(storeId, (nextStore) => {
@@ -183,7 +193,7 @@ const ShopifyOrdersPage = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-        <strong>Debug:</strong> orders.length={orders.length} | storeId={storeId || '—'} | ordersError={ordersError || '—'}
+        <strong>Debug:</strong> activeShopDomain={activeShopDomain || '—'} | firebaseProjectId={firebaseConfig.projectId || '—'} | collectionName={ordersDebug.collectionName || 'shopify_orders'} | primaryQuerySize={ordersDebug.primaryQuerySize ?? '—'} | fallbackQuerySize={ordersDebug.fallbackQuerySize ?? '—'} | finalOrdersLength={ordersDebug.finalOrdersLength ?? orders.length} | firstOrderSample={ordersDebug.firstOrderSample ? JSON.stringify({ id: ordersDebug.firstOrderSample.id, shopDomain: ordersDebug.firstOrderSample.shopDomain, storeId: ordersDebug.firstOrderSample.storeId }) : '—'} | storeId={storeId || '—'} | ordersError={ordersError || '—'}
       </div>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
