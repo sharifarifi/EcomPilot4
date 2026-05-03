@@ -69,8 +69,30 @@ const resolveDomainFromOrder = (order) => (
   )
 );
 
-export const subscribeToShopifyOrders = (callback, onError) => {
-  const expectedDomain = normalizeShopDomain(SHOP_DOMAIN);
+const EMPTY_DEBUG = {
+  activeShopDomain: '',
+  collectionName: SHOPIFY_ORDERS_COLLECTION,
+  primaryQuerySize: 0,
+  fallbackQuerySize: 0,
+  finalOrdersLength: 0,
+  firstOrderSample: null,
+};
+
+export const subscribeToShopifyOrders = (optionsOrCallback, callbackOrOnError, maybeOnError) => {
+  const hasOptions = typeof optionsOrCallback === 'object' && optionsOrCallback !== null;
+  const options = hasOptions ? optionsOrCallback : {};
+  const callback = hasOptions ? callbackOrOnError : optionsOrCallback;
+  const onError = hasOptions ? maybeOnError : callbackOrOnError;
+
+  const expectedDomain = normalizeShopDomain(options.shopDomain || SHOP_DOMAIN);
+  const onDebug = typeof options.onDebug === 'function' ? options.onDebug : null;
+
+  const emitDebug = (partial) => {
+    if (!onDebug) return;
+    onDebug({ ...EMPTY_DEBUG, activeShopDomain: expectedDomain, ...partial });
+  };
+
+  emitDebug();
   const shopifyOrdersQuery = query(
     collectionRef(SHOPIFY_ORDERS_COLLECTION),
     where('shopDomain', '==', expectedDomain)
@@ -88,13 +110,20 @@ export const subscribeToShopifyOrders = (callback, onError) => {
     (snapshot) => {
       const mapped = mapSnapshotDocs(snapshot, mapShopifyOrderSnapshot);
       console.info('[shopifyOrderService] Shopify orders primary query size:', mapped.length);
+      emitDebug({ primaryQuerySize: mapped.length });
 
       if (mapped.length > 0) {
         if (fallbackUnsubscribe) {
           fallbackUnsubscribe();
           fallbackUnsubscribe = null;
         }
-        callback(sortOrders(mapped));
+        const sorted = sortOrders(mapped);
+        callback(sorted);
+        emitDebug({
+          primaryQuerySize: mapped.length,
+          finalOrdersLength: sorted.length,
+          firstOrderSample: sorted[0] || null,
+        });
         return;
       }
 
@@ -117,7 +146,14 @@ export const subscribeToShopifyOrders = (callback, onError) => {
             );
 
             const filtered = fallbackMapped.filter((order) => resolveDomainFromOrder(order) === expectedDomain);
-            callback(sortOrders(filtered));
+            const sorted = sortOrders(filtered);
+            callback(sorted);
+            emitDebug({
+              primaryQuerySize: 0,
+              fallbackQuerySize: fallbackMapped.length,
+              finalOrdersLength: sorted.length,
+              firstOrderSample: sorted[0] || null,
+            });
           },
           (error) => {
             logServiceError(SERVICE_NAME, 'subscribeToShopifyOrders:fallback', error);

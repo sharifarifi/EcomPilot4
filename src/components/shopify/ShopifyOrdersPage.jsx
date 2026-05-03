@@ -57,14 +57,25 @@ const ShopifyOrdersPage = () => {
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [isLoadingStore, setIsLoadingStore] = useState(true);
   const [ordersError, setOrdersError] = useState('');
+  const [ordersDebug, setOrdersDebug] = useState(null);
 
-  const storeId = useMemo(
-    () => normalizeShopDomain(shopifyConfig.defaultShopDomain),
-    []
-  );
+  const activeShopDomain = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return normalizeShopDomain(shopifyConfig.defaultShopDomain);
+    }
+
+    const fromUrl = normalizeShopDomain(new URLSearchParams(window.location.search).get('shop') || '');
+    return fromUrl || normalizeShopDomain(shopifyConfig.defaultShopDomain);
+  }, []);
+
+  const storeId = useMemo(() => activeShopDomain, [activeShopDomain]);
 
   useEffect(() => {
     const unsubscribe = subscribeToShopifyOrders(
+      {
+        shopDomain: activeShopDomain,
+        onDebug: (debugInfo) => setOrdersDebug(debugInfo),
+      },
       (nextOrders) => {
         setOrders(Array.isArray(nextOrders) ? nextOrders : []);
         setOrdersError('');
@@ -78,7 +89,7 @@ const ShopifyOrdersPage = () => {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [activeShopDomain]);
 
   useEffect(() => {
     const unsubscribe = subscribeToShopifyStore(storeId, (nextStore) => {
@@ -184,6 +195,14 @@ const ShopifyOrdersPage = () => {
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
         <strong>Debug:</strong> orders.length={orders.length} | storeId={storeId || '—'} | ordersError={ordersError || '—'}
+        <div className="mt-1 text-[11px] text-slate-500">
+          activeShopDomain={ordersDebug?.activeShopDomain || activeShopDomain || '—'} | firebaseProjectId={import.meta.env.VITE_FIREBASE_PROJECT_ID || '—'} |
+          collectionName={ordersDebug?.collectionName || 'shopify_orders'} | primaryQuerySize={ordersDebug?.primaryQuerySize ?? 0} |
+          fallbackQuerySize={ordersDebug?.fallbackQuerySize ?? 0} | finalOrdersLength={ordersDebug?.finalOrdersLength ?? orders.length}
+        </div>
+        <div className="mt-1 truncate text-[11px] text-slate-400">
+          firstOrderSample={ordersDebug?.firstOrderSample ? JSON.stringify(ordersDebug.firstOrderSample) : '—'}
+        </div>
       </div>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
