@@ -1,8 +1,9 @@
 import type { Request, Response } from 'express';
 import { adminDb } from '../config/firebaseAdmin.js';
 import axios from 'axios';
+import { DEFAULT_SHOP_DOMAIN, normalizeShopifyOrder } from '../shopify/normalizeShopifyOrder.js';
 
-const SHOP_DOMAIN = 'z50nyc-dm.myshopify.com';
+const SHOP_DOMAIN = DEFAULT_SHOP_DOMAIN;
 
 export const manualSync = async (req: Request, res: Response): Promise<void> => {
   const requestedShop = String(req.query.shop || '').trim().toLowerCase();
@@ -39,28 +40,7 @@ export const manualSync = async (req: Request, res: Response): Promise<void> => 
 
     orders.forEach((order: any) => {
       const orderRef = adminDb.collection('shopify_orders').doc(String(order.id));
-      const customerName = order.customer ? `${order.customer.first_name || ''} ${order.customer.last_name || ''}`.trim() : 'Müşteri Bilgisi Yok';
-      batch.set(orderRef, {
-        order_id: order.id,
-        shopifyOrderId: String(order.id),
-        order_number: order.name,
-        orderName: order.name,
-        total_price: order.total_price,
-        totalPrice: Number(order.total_price || 0),
-        currency: order.currency,
-        customer: customerName,
-        customerName,
-        email: order.customer?.email || '',
-        created_at: order.created_at,
-        createdAt: order.created_at,
-        financial_status: order.financial_status,
-        financialStatus: order.financial_status,
-        fulfillment_status: order.fulfillment_status || 'unfulfilled',
-        fulfillmentStatus: order.fulfillment_status || 'unfulfilled',
-        shopDomain: SHOP_DOMAIN,
-        syncedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
+      batch.set(orderRef, normalizeShopifyOrder(order, SHOP_DOMAIN), { merge: true });
     });
 
     await batch.commit();
