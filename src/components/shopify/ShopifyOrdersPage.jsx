@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, ClipboardList, Loader2, Package, RefreshCcw, ShoppingCart, Store, Wallet } from 'lucide-react';
 import { subscribeToShopifyOrders } from '../../firebase/shopifyOrderService';
 import { subscribeToShopifyStore } from '../../firebase/shopifyStoreService';
-import { normalizeShopDomain, shopifyConfig } from '../../config/shopify';
+import { resolveShopDomain, shopifyConfig } from '../../config/shopify';
+import { firebaseConfig } from '../../firebase/firebaseConfig';
 
 const moneyFormatter = new Intl.NumberFormat('tr-TR', {
   style: 'currency',
@@ -57,14 +58,29 @@ const ShopifyOrdersPage = () => {
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [isLoadingStore, setIsLoadingStore] = useState(true);
   const [ordersError, setOrdersError] = useState('');
+  const [debugInfo, setDebugInfo] = useState({
+    collectionName: 'shopify_orders',
+    primaryQuerySize: 0,
+    fallbackQuerySize: 0,
+    finalOrdersLength: 0,
+    firstOrderSample: null,
+    lastError: null,
+  });
 
-  const storeId = useMemo(
-    () => normalizeShopDomain(shopifyConfig.defaultShopDomain),
-    []
-  );
+  const activeShopDomain = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return resolveShopDomain(
+      params.get('shop') || shopifyConfig.defaultShopDomain || 'z50nyc-dm.myshopify.com'
+    );
+  }, []);
+
+  const storeId = activeShopDomain;
+  const currentHostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  const isPreviewDeployment = /vercel\.app$/i.test(currentHostname) && currentHostname !== 'ecom-pilot4.vercel.app';
 
   useEffect(() => {
     const unsubscribe = subscribeToShopifyOrders(
+      activeShopDomain,
       (nextOrders) => {
         setOrders(Array.isArray(nextOrders) ? nextOrders : []);
         setOrdersError('');
@@ -73,12 +89,16 @@ const ShopifyOrdersPage = () => {
       (error) => {
         console.error('Shopify siparişleri dinlenirken hata oluştu:', error);
         setOrdersError('Shopify siparişleri yüklenirken bir hata oluştu.');
+        setDebugInfo((prev) => ({ ...prev, lastError: error?.message || String(error) }));
         setIsLoadingOrders(false);
+      },
+      (nextDebug) => {
+        setDebugInfo((prev) => ({ ...prev, ...nextDebug }));
       }
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [activeShopDomain]);
 
   useEffect(() => {
     const unsubscribe = subscribeToShopifyStore(storeId, (nextStore) => {
@@ -183,8 +203,13 @@ const ShopifyOrdersPage = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-        <strong>Debug:</strong> orders.length={orders.length} | storeId={storeId || '—'} | ordersError={ordersError || '—'}
+        <strong>Debug:</strong> activeShopDomain={activeShopDomain || '—'} | firebaseProjectId={firebaseConfig.projectId || '—'} | collectionName={debugInfo.collectionName} | primaryQuerySize={debugInfo.primaryQuerySize} | fallbackQuerySize={debugInfo.fallbackQuerySize} | finalOrdersLength={debugInfo.finalOrdersLength} | firstOrderSample={debugInfo.firstOrderSample ? JSON.stringify({ id: debugInfo.firstOrderSample.id, shopDomain: debugInfo.firstOrderSample.shopDomain, storeId: debugInfo.firstOrderSample.storeId, orderName: debugInfo.firstOrderSample.orderName }) : '—'} | lastError={debugInfo.lastError || '—'} | ordersError={ordersError || '—'}
       </div>
+      {isPreviewDeployment && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+          Preview deployment algılandı: <span className="font-mono">{currentHostname}</span>. Production domain <span className="font-mono">ecom-pilot4.vercel.app</span> değilse environment değişkenleri farklı olabilir.
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
