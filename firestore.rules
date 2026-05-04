@@ -79,6 +79,17 @@ service cloud.firestore {
     match /settings/{document} {
       allow read, write: if isManagement();
     }
+
+    // --- Shopify Koleksiyonları ---
+    match /shopify_orders/{orderId} {
+      allow read: if isManagement();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /shopify_stores/{storeId} {
+      allow read: if isManagement();
+      allow create, update, delete: if isAdmin();
+    }
     
     // --- 3. GÖREVLER (TASKS) ---
     match /tasks/{taskId} {
