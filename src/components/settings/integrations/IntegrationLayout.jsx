@@ -17,6 +17,9 @@ import AccountingApps from './AccountingApps';
 import { ecommerceData, marketplaceData, logisticsData, paymentData, accountingData } from '../../../demo-data/integrations/catalog';
 
 const IntegrationLayout = () => {
+  const currentHostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  const isPreviewDeployment = /vercel\.app$/i.test(currentHostname) && currentHostname !== 'ecom-pilot4.vercel.app';
+  const isApiFallbackMode = shopifyConfig.functionsBaseUrl.includes('/api/shopify');
   const [activeTab, setActiveTab] = useState('E-Ticaret');
   const [toasts, setToasts] = useState([]);
   const logsEndRef = useRef(null);
@@ -561,6 +564,19 @@ const IntegrationLayout = () => {
                             {shopifyConfig.functionsBaseUrlSource === 'derived' && (
                               <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
                                 `VITE_SHOPIFY_FUNCTIONS_BASE_URL` tanımlı değil; sistem varsayılan olarak <span className="font-mono">{shopifyConfig.functionsBaseUrl}</span> adresini kullanıyor.
+                              </div>
+                            )}
+                            <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] text-slate-700">
+                              <strong>Functions Debug:</strong> baseUrl=<span className="font-mono">{shopifyConfig.functionsBaseUrl}</span> | source={shopifyConfig.functionsBaseUrlSource} | host={currentHostname || 'unknown'}
+                            </div>
+                            {isApiFallbackMode && (
+                              <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+                                Bu deployment `/api/shopify` fallback modunda çalışıyor. Bu genelde eski deployment veya eksik environment variable anlamına gelir.
+                              </div>
+                            )}
+                            {isPreviewDeployment && (
+                              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+                                Preview deployment algılandı (<span className="font-mono">{currentHostname}</span>). Production dışı ortamda env farklı olabilir.
                               </div>
                             )}
                             <div className="mt-3 rounded-lg bg-slate-900 px-3 py-2 font-mono text-[11px] text-slate-200 break-all">
