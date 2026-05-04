@@ -8,6 +8,22 @@ const normalizeShopDomain = (value = '') => {
     .replace(/\/.*$/, '');
 };
 
+const isValidShopifyDomain = (value = '') => /\.myshopify\.com$/i.test(normalizeShopDomain(value));
+
+const resolveShopDomain = (...candidates) => {
+  for (const candidate of candidates) {
+    const normalized = normalizeShopDomain(String(candidate || ''));
+    if (!normalized) continue;
+    if (isValidShopifyDomain(normalized)) return normalized;
+    if (/cloudfunctions\.net$|vercel\.app$|firebaseapp\.com$/i.test(normalized)) {
+      console.warn('[shopify-config] Geçersiz shop domain algılandı, yok sayılıyor:', normalized);
+      continue;
+    }
+  }
+
+  return 'z50nyc-dm.myshopify.com';
+};
+
 const getOrigin = () => {
   if (typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin;
@@ -54,7 +70,7 @@ const buildFunctionsUrl = (path) => {
 export const buildShopifyFunctionUrl = (path) => buildFunctionsUrl(path);
 
 export const shopifyConfig = {
-  defaultShopDomain: normalizeShopDomain(import.meta.env.VITE_SHOPIFY_STORE_DOMAIN || ''),
+  defaultShopDomain: resolveShopDomain(import.meta.env.VITE_SHOPIFY_STORE_DOMAIN || ''),
   appOrigin: getOrigin(),
   functionsBaseUrl: getFunctionsBaseUrl(),
   functionsBaseUrlSource: (import.meta.env.VITE_SHOPIFY_FUNCTIONS_BASE_URL || '').trim() ? 'env' : 'derived',
@@ -83,3 +99,4 @@ export const buildShopifyStartInstallUrl = ({
 };
 
 export { normalizeShopDomain };
+export { isValidShopifyDomain, resolveShopDomain };

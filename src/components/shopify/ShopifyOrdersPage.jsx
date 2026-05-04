@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AlertCircle, ClipboardList, Loader2, Package, RefreshCcw, ShoppingCart, Store, Wallet } from 'lucide-react';
 import { subscribeToShopifyOrders } from '../../firebase/shopifyOrderService';
 import { subscribeToShopifyStore } from '../../firebase/shopifyStoreService';
-import { normalizeShopDomain, shopifyConfig } from '../../config/shopify';
+import { resolveShopDomain, shopifyConfig } from '../../config/shopify';
 import { firebaseConfig } from '../../firebase/firebaseConfig';
 
 const moneyFormatter = new Intl.NumberFormat('tr-TR', {
@@ -69,7 +69,7 @@ const ShopifyOrdersPage = () => {
 
   const activeShopDomain = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
-    return normalizeShopDomain(
+    return resolveShopDomain(
       params.get('shop') || shopifyConfig.defaultShopDomain || 'z50nyc-dm.myshopify.com'
     );
   }, []);
