@@ -5,7 +5,7 @@ import {
   mapSnapshotDocs,
   logServiceError
 } from './serviceCore';
-import { normalizeShopDomain } from '../config/shopify';
+import { normalizeShopDomain, shopifyConfig } from '../config/shopify';
 
 const SERVICE_NAME = 'shopifyOrderService';
 const SHOPIFY_ORDERS_COLLECTION = FIRESTORE_PATHS.shopifyOrders;
@@ -69,12 +69,19 @@ const resolveDomainFromOrder = (order) => (
 );
 
 export const subscribeToShopifyOrders = (
-  shopDomain,
-  callback,
-  onError,
-  onDebug
+  shopDomainOrCallback,
+  maybeCallback,
+  maybeErrorCallback,
+  maybeDebugCallback
 ) => {
-  const expectedDomain = normalizeShopDomain(shopDomain || '');
+  const hasExplicitShopDomain = typeof shopDomainOrCallback === 'string';
+  const expectedDomain = hasExplicitShopDomain
+    ? normalizeShopDomain(shopDomainOrCallback)
+    : normalizeShopDomain(shopifyConfig.defaultShopDomain || 'z50nyc-dm.myshopify.com');
+  const callback = hasExplicitShopDomain ? maybeCallback : shopDomainOrCallback;
+  const onError = hasExplicitShopDomain ? maybeErrorCallback : maybeCallback;
+  const onDebug = hasExplicitShopDomain ? maybeDebugCallback : maybeErrorCallback;
+
   const shopifyOrdersQuery = query(
     collectionRef(SHOPIFY_ORDERS_COLLECTION),
     where('shopDomain', '==', expectedDomain)
@@ -126,11 +133,23 @@ export const subscribeToShopifyOrders = (
                 shop: order.shop || '',
                 domain: order.domain || '',
                 storeDomain: order.storeDomain || '',
+                myshopifyDomain: order.myshopifyDomain || '',
                 resolvedDomain: resolveDomainFromOrder(order),
               }))
             );
 
-            const filtered = fallbackMapped.filter((order) => resolveDomainFromOrder(order) === expectedDomain);
+            const filtered = fallbackMapped.filter((order) => {
+              const normalizedCandidates = [
+                order.shopDomain,
+                order.storeId,
+                order.shop,
+                order.domain,
+                order.storeDomain,
+                order.myshopifyDomain,
+              ].map((item) => normalizeShopDomain(String(item || '')));
+
+              return normalizedCandidates.includes(expectedDomain);
+            });
             const sorted = sortOrders(filtered);
             onDebug?.({
               fallbackQuerySize: fallbackMapped.length,

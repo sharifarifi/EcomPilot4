@@ -64,11 +64,14 @@ const ShopifyOrdersPage = () => {
     fallbackQuerySize: 0,
     finalOrdersLength: 0,
     firstOrderSample: null,
+    lastError: null,
   });
 
   const activeShopDomain = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
-    return normalizeShopDomain(params.get('shop') || shopifyConfig.defaultShopDomain);
+    return normalizeShopDomain(
+      params.get('shop') || shopifyConfig.defaultShopDomain || 'z50nyc-dm.myshopify.com'
+    );
   }, []);
 
   const storeId = activeShopDomain;
@@ -84,6 +87,7 @@ const ShopifyOrdersPage = () => {
       (error) => {
         console.error('Shopify siparişleri dinlenirken hata oluştu:', error);
         setOrdersError('Shopify siparişleri yüklenirken bir hata oluştu.');
+        setDebugInfo((prev) => ({ ...prev, lastError: error?.message || String(error) }));
         setIsLoadingOrders(false);
       },
       (nextDebug) => {
@@ -197,7 +201,7 @@ const ShopifyOrdersPage = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600">
-        <strong>Debug:</strong> activeShopDomain={activeShopDomain || '—'} | firebaseProjectId={firebaseConfig.projectId || '—'} | collectionName={debugInfo.collectionName} | primaryQuerySize={debugInfo.primaryQuerySize} | fallbackQuerySize={debugInfo.fallbackQuerySize} | finalOrdersLength={debugInfo.finalOrdersLength} | firstOrderSample={debugInfo.firstOrderSample ? JSON.stringify({ id: debugInfo.firstOrderSample.id, shopDomain: debugInfo.firstOrderSample.shopDomain, storeId: debugInfo.firstOrderSample.storeId, orderName: debugInfo.firstOrderSample.orderName }) : '—'} | ordersError={ordersError || '—'}
+        <strong>Debug:</strong> activeShopDomain={activeShopDomain || '—'} | firebaseProjectId={firebaseConfig.projectId || '—'} | collectionName={debugInfo.collectionName} | primaryQuerySize={debugInfo.primaryQuerySize} | fallbackQuerySize={debugInfo.fallbackQuerySize} | finalOrdersLength={debugInfo.finalOrdersLength} | firstOrderSample={debugInfo.firstOrderSample ? JSON.stringify({ id: debugInfo.firstOrderSample.id, shopDomain: debugInfo.firstOrderSample.shopDomain, storeId: debugInfo.firstOrderSample.storeId, orderName: debugInfo.firstOrderSample.orderName }) : '—'} | lastError={debugInfo.lastError || '—'} | ordersError={ordersError || '—'}
       </div>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
