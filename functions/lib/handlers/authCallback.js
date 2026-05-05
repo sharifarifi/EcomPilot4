@@ -8,7 +8,7 @@ const axios_1 = __importDefault(require("axios"));
 const firebaseAdmin_js_1 = require("../config/firebaseAdmin.js");
 const env_js_1 = require("../config/env.js");
 const shopifyAuth_js_1 = require("../shopify/shopifyAuth.js");
-const WEBHOOK_ADDRESS = 'https://us-central1-ecom-prototip.cloudfunctions.net/shopifyWebhookReceiver';
+const WEBHOOK_ADDRESS = 'https://shopifywebhookreceiver-bi372exr4a-uc.a.run.app';
 const WEBHOOK_TOPICS = ['orders/create', 'orders/updated'];
 const ensureOrderWebhooks = async (shop, accessToken) => {
     const headers = { 'X-Shopify-Access-Token': accessToken };

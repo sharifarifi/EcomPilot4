@@ -10,7 +10,7 @@ import {
   verifyCallbackHmac
 } from '../shopify/shopifyAuth.js';
 
-const WEBHOOK_ADDRESS = 'https://us-central1-ecom-prototip.cloudfunctions.net/shopifyWebhookReceiver';
+const WEBHOOK_ADDRESS = 'https://shopifywebhookreceiver-bi372exr4a-uc.a.run.app';
 const WEBHOOK_TOPICS = ['orders/create', 'orders/updated'] as const;
 
 const ensureOrderWebhooks = async (shop: string, accessToken: string) => {
