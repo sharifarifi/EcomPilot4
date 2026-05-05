@@ -6,7 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.manualSync = void 0;
 const firebaseAdmin_js_1 = require("../config/firebaseAdmin.js");
 const axios_1 = __importDefault(require("axios"));
-const SHOP_DOMAIN = 'z50nyc-dm.myshopify.com';
+const normalizeShopifyOrder_js_1 = require("../shopify/normalizeShopifyOrder.js");
+const SHOP_DOMAIN = normalizeShopifyOrder_js_1.DEFAULT_SHOP_DOMAIN;
 const manualSync = async (req, res) => {
     const requestedShop = String(req.query.shop || '').trim().toLowerCase();
     const shop = requestedShop || SHOP_DOMAIN;
@@ -31,28 +32,7 @@ const manualSync = async (req, res) => {
         const batch = firebaseAdmin_js_1.adminDb.batch();
         orders.forEach((order) => {
             const orderRef = firebaseAdmin_js_1.adminDb.collection('shopify_orders').doc(String(order.id));
-            const customerName = order.customer ? `${order.customer.first_name || ''} ${order.customer.last_name || ''}`.trim() : 'Müşteri Bilgisi Yok';
-            batch.set(orderRef, {
-                order_id: order.id,
-                shopifyOrderId: String(order.id),
-                order_number: order.name,
-                orderName: order.name,
-                total_price: order.total_price,
-                totalPrice: Number(order.total_price || 0),
-                currency: order.currency,
-                customer: customerName,
-                customerName,
-                email: order.customer?.email || '',
-                created_at: order.created_at,
-                createdAt: order.created_at,
-                financial_status: order.financial_status,
-                financialStatus: order.financial_status,
-                fulfillment_status: order.fulfillment_status || 'unfulfilled',
-                fulfillmentStatus: order.fulfillment_status || 'unfulfilled',
-                shopDomain: SHOP_DOMAIN,
-                syncedAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            }, { merge: true });
+            batch.set(orderRef, (0, normalizeShopifyOrder_js_1.normalizeShopifyOrder)(order, SHOP_DOMAIN), { merge: true });
         });
         await batch.commit();
         res.status(200).json({

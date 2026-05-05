@@ -15,7 +15,7 @@ const NEW_CLIENT_SECRET = "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";
 export const getBackendEnv = (): BackendEnv => {
   return {
     // Vercel Linkin
-    appBaseUrl: "https://ecom-pilot4-20vi7qhk3-sharifarifis-projects.vercel.app/",
+    appBaseUrl: "https://ecom-pilot4.vercel.app",
     
     firebaseProjectId: "ecom-prototip",
     

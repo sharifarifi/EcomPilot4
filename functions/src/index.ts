@@ -4,6 +4,7 @@ import { connectionTest } from './handlers/connectionTest.js';
 import { manualSync } from './handlers/manualSync.js';
 import { startInstall } from './handlers/startInstall.js';
 import { webhookReceiver } from './handlers/webhookReceiver.js';
+import { registerWebhooks } from './handlers/registerWebhooks.js';
 
 /**
  * TypeScript Hatalarını Gidermek İçin Sarıcı (Wrapper) Yapısı:
@@ -35,4 +36,7 @@ export const shopifyConnectionTest = onRequest({
     cors: true 
 }, async (req, res) => {
     await connectionTest(req, res);
+});
+export const shopifyRegisterWebhooks = onRequest({ cors: true }, async (req, res) => {
+    await registerWebhooks(req, res);
 });
